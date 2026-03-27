@@ -1,0 +1,108 @@
+/* ── BPM display ─────────────────────────────────────────── */
+#bpm-display {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 52px;
+  text-align: center;
+  letter-spacing: -0.02em;
+}
+
+#bpm-display.editing {
+  background: var(--bg-3);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+}
+
+/* ── Tap tempo ───────────────────────────────────────────── */
+#tap-btn {
+  font-size: 10px;
+  padding: 4px 10px;
+  min-width: 42px;
+}
+
+#tap-btn.flash {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+/* ── Knobs ───────────────────────────────────────────────── */
+.knob-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.knob-wrap label {
+  font-size: 9px;
+}
+
+/* ── Scale / root ───────────────────────────────────────── */
+#scale-select, #root-select {
+  font-size: 11px;
+  min-width: 90px;
+}
+
+/* ── Step count ─────────────────────────────────────────── */
+#step-count-input {
+  width: 48px;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+
+/* ── MIDI port selects ──────────────────────────────────── */
+.midi-port-select {
+  min-width: 120px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Loop markers ───────────────────────────────────────── */
+.loop-input {
+  width: 44px;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+
+/* ── Direction buttons ──────────────────────────────────── */
+.dir-btn {
+  padding: 4px 6px;
+  font-size: 13px;
+}
+
+/* ── Gate slider ────────────────────────────────────────── */
+#gate-slider {
+  width: 80px;
+}
+
+/* ── Swing slider ───────────────────────────────────────── */
+#swing-slider {
+  width: 80px;
+}
+
+/* ── Transpose ──────────────────────────────────────────── */
+#transpose-input {
+  width: 44px;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+
+/* ── Channel ────────────────────────────────────────────── */
+#channel-input {
+  width: 40px;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+
+/* ── Value readout beside sliders ───────────────────────── */
+.val-readout {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  min-width: 28px;
+  text-align: right;
+}

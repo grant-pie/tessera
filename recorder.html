@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tessera — Recorder</title>
+  <link rel="stylesheet" href="style/base.css" />
+  <link rel="stylesheet" href="style/nav.css" />
+  <link rel="stylesheet" href="style/recorder.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Nav ─────────────────────────────────────────────── -->
+  <nav id="page-nav">
+    <a href="index.html" class="nav-brand">TESSERA</a>
+    <a href="index.html">Sequencer</a>
+    <a href="recorder.html" class="active">Recorder</a>
+    <a href="generate.html">Generate</a>
+  </nav>
+
+  <!-- ── Toolbar ─────────────────────────────────────────── -->
+  <div id="rec-toolbar">
+
+    <!-- Transport -->
+    <button id="rec-record-btn" class="rec-transport-btn" title="Record (Space)">● Record</button>
+    <button id="rec-play-btn"   class="rec-transport-btn" title="Play (Space)">▶ Play</button>
+    <button id="rec-stop-btn"   class="rec-transport-btn" title="Stop (Esc)">■ Stop</button>
+    <button id="rec-loop-btn"   title="Toggle loop">⟳ Loop</button>
+
+    <div class="separator"></div>
+
+    <!-- Recording name -->
+    <input id="rec-name-input" type="text" value="Recording 1" placeholder="Recording name" />
+
+    <div class="separator"></div>
+
+    <!-- MIDI I/O -->
+    <div class="ctrl-group">
+      <label>IN</label>
+      <select id="rec-input-select"  class="rec-port-select"></select>
+    </div>
+    <div class="ctrl-group">
+      <label>OUT</label>
+      <select id="rec-output-select" class="rec-port-select"></select>
+    </div>
+    <div class="ctrl-group">
+      <label>CH</label>
+      <select id="rec-channel-select" style="width:110px"></select>
+    </div>
+
+    <div class="separator"></div>
+
+    <!-- File -->
+    <button id="rec-save-btn">↓ Save</button>
+    <button id="rec-load-btn">↑ Load</button>
+
+    <div class="separator"></div>
+
+    <!-- Quantize -->
+    <div class="ctrl-group">
+      <label>BPM</label>
+      <input id="rec-bpm-input" type="number" min="20" max="300" value="120"
+             style="width:52px;text-align:center;font-family:var(--font-mono)" />
+    </div>
+    <div class="ctrl-group">
+      <label>GRID</label>
+      <select id="rec-grid-select" style="width:60px">
+        <option value="4">1/4</option>
+        <option value="8">1/8</option>
+        <option value="16" selected>1/16</option>
+        <option value="32">1/32</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>STR</label>
+      <input id="rec-strength-slider" type="range" min="0" max="100" value="100" style="width:64px" />
+      <span id="rec-strength-val" class="val-readout">100%</span>
+    </div>
+    <button id="rec-quantize-btn">⧖ Quantize</button>
+    <button id="rec-trim-btn">✂ Apply Trim</button>
+
+    <div class="separator"></div>
+
+    <!-- Clear -->
+    <button id="rec-clear-btn" style="color:var(--red)">✕ Clear</button>
+
+  </div>
+
+  <!-- ── Stats bar ────────────────────────────────────────── -->
+  <div id="rec-stats">
+    <span style="color:var(--text-dim)">Duration:</span>
+    <span id="rec-duration">0:00.000</span>
+    <span style="color:var(--text-dim)">|</span>
+    <span id="rec-event-count">0 events</span>
+    <span id="midi-status"></span>
+  </div>
+
+  <!-- ── Visualisation ────────────────────────────────────── -->
+  <div id="rec-main">
+    <canvas id="vis-canvas-bg"></canvas>
+    <canvas id="vis-canvas-cursor"></canvas>
+  </div>
+
+</div>
+<script type="module" src="src/recorder/recorder-main.js"></script>
+</body>
+</html>

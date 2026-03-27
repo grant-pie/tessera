@@ -1,0 +1,178 @@
+#gen-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#gen-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  padding: 24px;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* ── Left column: visualisation ──────────────────────────────── */
+#gen-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+}
+
+#gen-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent-bright);
+  align-self: flex-start;
+}
+
+#ring-wrap {
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 1;
+  position: relative;
+}
+
+#ring-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#strip-wrap {
+  width: 100%;
+  max-width: 640px;
+}
+
+#strip-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+#strip-canvas {
+  width: 100%;
+  height: 28px;
+  display: block;
+}
+
+/* ── Right column: controls ──────────────────────────────────── */
+#gen-right {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-y: auto;
+}
+
+.gen-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.gen-section:last-child {
+  border-bottom: none;
+}
+
+.gen-section-heading {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.gen-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.gen-row:last-child {
+  margin-bottom: 0;
+}
+
+.gen-row label {
+  width: 48px;
+  flex-shrink: 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.gen-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.gen-row .val-readout {
+  width: 36px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.gen-row input[type="number"] {
+  width: 54px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+}
+
+.note-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-bright);
+  width: 36px;
+}
+
+/* Glide toggle */
+#gen-glide-btn {
+  font-size: 11px;
+  padding: 4px 12px;
+}
+
+/* Action buttons */
+.gen-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#gen-send-btn {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent-bright);
+  font-weight: 600;
+  padding: 8px;
+  font-size: 12px;
+}
+
+#gen-send-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+#gen-download-btn {
+  padding: 7px;
+  font-size: 11px;
+}

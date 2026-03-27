@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tessera — Generate</title>
+  <link rel="stylesheet" href="style/base.css" />
+  <link rel="stylesheet" href="style/nav.css" />
+  <link rel="stylesheet" href="style/generate.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+<div id="gen-page">
+
+  <!-- ── Nav ────────────────────────────────────────────────── -->
+  <nav id="page-nav">
+    <a href="index.html" class="nav-brand">TESSERA</a>
+    <a href="index.html">Sequencer</a>
+    <a href="recorder.html">Recorder</a>
+    <a href="generate.html" class="active">Generate</a>
+  </nav>
+
+  <!-- ── Main ───────────────────────────────────────────────── -->
+  <div id="gen-main">
+
+    <!-- Left: visualisation -->
+    <div id="gen-left">
+      <div id="gen-section-title">Euclidean Rhythm Generator</div>
+
+      <div id="ring-wrap">
+        <canvas id="ring-canvas"></canvas>
+      </div>
+
+      <div id="strip-wrap">
+        <div id="strip-label">Pattern</div>
+        <canvas id="strip-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Right: controls -->
+    <div id="gen-right">
+
+      <div class="gen-section">
+        <div class="gen-section-heading">Rhythm</div>
+
+        <div class="gen-row">
+          <label>Steps</label>
+          <input id="gen-steps" type="range" min="1" max="64" value="16" />
+          <span id="gen-steps-val" class="val-readout">16</span>
+        </div>
+
+        <div class="gen-row">
+          <label>Hits</label>
+          <input id="gen-hits" type="range" min="0" max="16" value="5" />
+          <span id="gen-hits-val" class="val-readout">5</span>
+        </div>
+
+        <div class="gen-row">
+          <label>Rotation</label>
+          <input id="gen-rot" type="range" min="0" max="15" value="0" />
+          <span id="gen-rot-val" class="val-readout">0</span>
+        </div>
+      </div>
+
+      <div class="gen-section">
+        <div class="gen-section-heading">Note</div>
+
+        <div class="gen-row">
+          <label>MIDI</label>
+          <input id="gen-note" type="number" min="0" max="127" value="36" />
+          <span class="note-name" id="gen-note-name">C2</span>
+        </div>
+
+        <div class="gen-row">
+          <label>Velocity</label>
+          <input id="gen-vel" type="range" min="1" max="127" value="100" />
+          <span id="gen-vel-val" class="val-readout">100</span>
+        </div>
+
+        <div class="gen-row">
+          <label>Glide</label>
+          <button id="gen-glide-btn">Glide: OFF</button>
+        </div>
+      </div>
+
+      <div class="gen-section">
+        <div class="gen-actions">
+          <button id="gen-send-btn">→ Send to Sequencer</button>
+          <button id="gen-download-btn">↓ Download Preset</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="src/generate/euclidean-ui.js"></script>
+</body>
+</html>

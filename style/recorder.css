@@ -1,0 +1,115 @@
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Recorder toolbar ────────────────────────────────────── */
+#rec-toolbar {
+  flex: 0 0 auto;
+  height: 52px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+#rec-toolbar .separator {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Stats bar ───────────────────────────────────────────── */
+#rec-stats {
+  flex: 0 0 auto;
+  height: 28px;
+  background: var(--bg-0);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+#rec-duration {
+  color: var(--text-primary);
+  min-width: 80px;
+}
+
+#midi-status {
+  color: var(--amber);
+  margin-left: auto;
+}
+
+/* ── Vis area ────────────────────────────────────────────── */
+#rec-main {
+  flex: 1 1 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-0);
+}
+
+#rec-main canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#vis-canvas-cursor {
+  pointer-events: none;
+}
+
+/* ── Transport buttons ───────────────────────────────────── */
+.rec-transport-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 88px;
+}
+
+#rec-record-btn.active {
+  background: var(--red-dim);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+#rec-play-btn.active {
+  background: var(--green-dim);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* ── Name input ──────────────────────────────────────────── */
+#rec-name-input {
+  font-size: 12px;
+  font-weight: 600;
+  width: 160px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  padding: 3px 6px;
+}
+
+#rec-name-input:focus {
+  background: var(--bg-3);
+  border-color: var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+/* ── MIDI port selects ───────────────────────────────────── */
+.rec-port-select {
+  min-width: 130px;
+  max-width: 180px;
+}

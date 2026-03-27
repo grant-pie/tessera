@@ -1,0 +1,108 @@
+/* ── Step editor panel ──────────────────────────────────── */
+#step-editor h3 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+
+.step-editor-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.step-editor-row label {
+  display: block;
+}
+
+.step-editor-row .row-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#step-editor input[type="range"] {
+  flex: 1;
+}
+
+.substep-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.substep-btn {
+  width: 28px;
+  padding: 3px 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
+}
+
+.substep-btn.active {
+  background: var(--amber-dim);
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+#close-step-editor {
+  align-self: flex-end;
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+/* ── Randomize panel ─────────────────────────────────────── */
+#randomize-panel h3 {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.rand-section {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rand-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.rand-section h4 {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.rand-section .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.rand-section input[type="range"] { flex: 1; }
+
+.rand-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rand-btn {
+  flex: 1;
+  padding: 6px;
+  text-align: center;
+}
+
+#randomize-panel .close-btn {
+  margin-top: 8px;
+  width: 100%;
+}

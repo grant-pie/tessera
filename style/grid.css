@@ -1,0 +1,50 @@
+/* Grid scroll container */
+#grid-canvas-container {
+  cursor: crosshair;
+}
+
+/* Background and playhead layers must not capture pointer events —
+   clicks should fall through to the content canvas which holds the handlers */
+#canvas-bg,
+#canvas-playhead {
+  pointer-events: none;
+}
+
+/* Step indicator row above grid */
+#step-numbers {
+  display: flex;
+  height: 18px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#step-numbers .step-num {
+  flex: 0 0 var(--step-col-width);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: var(--text-dim);
+  border-right: 1px solid var(--border);
+}
+
+#step-numbers .step-num.beat-start {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+#step-numbers .step-num.loop-start { border-left: 2px solid var(--step-loop-marker); }
+#step-numbers .step-num.loop-end   { border-right: 2px solid var(--step-loop-marker); }
+
+/* Velocity bars inside canvas */
+.velocity-canvas { cursor: ns-resize; }
+
+/* CC lane */
+.cc-canvas { cursor: ns-resize; }
+
+/* Glide / substep rows */
+.glide-row-canvas,
+.substep-row-canvas { cursor: pointer; }

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tessera — MIDI Sequencer</title>
+  <link rel="stylesheet" href="style/base.css" />
+  <link rel="stylesheet" href="style/nav.css" />
+  <link rel="stylesheet" href="style/layout.css" />
+  <link rel="stylesheet" href="style/grid.css" />
+  <link rel="stylesheet" href="style/controls.css" />
+  <link rel="stylesheet" href="style/sidebar.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Nav ──────────────────────────────────────────────────────── -->
+  <nav id="page-nav">
+    <a href="index.html" class="nav-brand">TESSERA</a>
+    <a href="index.html" class="active">Sequencer</a>
+    <a href="recorder.html">Recorder</a>
+    <a href="generate.html">Generate</a>
+  </nav>
+
+  <!-- ── Toolbar ─────────────────────────────────────────────────── -->
+  <div id="toolbar">
+    <span style="font-weight:700;font-size:13px;letter-spacing:0.08em;color:var(--accent-bright);flex-shrink:0">TESSERA</span>
+
+    <div class="separator"></div>
+
+    <button id="play-btn" class="transport-btn play-btn" title="Play (Space)">▶</button>
+    <button id="stop-btn" class="transport-btn" title="Stop (Esc)">■</button>
+
+    <div class="separator"></div>
+
+    <div class="ctrl-group">
+      <button id="bpm-down" style="padding:2px 6px">−</button>
+      <div id="bpm-display" title="Double-click or scroll to edit BPM">120</div>
+      <button id="bpm-up" style="padding:2px 6px">+</button>
+    </div>
+    <button id="tap-btn" title="Tap Tempo">TAP</button>
+
+    <div class="separator"></div>
+
+    <button id="clock-source-btn" title="Toggle internal / external MIDI clock">INT</button>
+
+    <div class="separator"></div>
+
+    <div class="ctrl-group">
+      <label>OUT</label>
+      <select id="output-select" class="midi-port-select"></select>
+    </div>
+    <div class="ctrl-group">
+      <label>IN</label>
+      <select id="input-select" class="midi-port-select"></select>
+    </div>
+
+    <div class="separator"></div>
+
+    <button id="randomize-btn" style="color:var(--amber)">⚄ Randomize</button>
+    <button id="clear-btn" style="color:var(--red)">✕ Clear</button>
+
+    <div class="separator"></div>
+
+    <button id="save-btn">↓ Save</button>
+    <button id="load-btn">↑ Load</button>
+  </div>
+
+  <!-- ── Controls bar ─────────────────────────────────────────────── -->
+  <div id="controls-bar">
+    <div class="ctrl-group">
+      <label>DIR</label>
+      <button class="dir-btn active" data-dir="forward"   title="Forward">▶</button>
+      <button class="dir-btn"        data-dir="reverse"   title="Reverse">◀</button>
+      <button class="dir-btn"        data-dir="ping-pong" title="Ping-pong">⇄</button>
+      <button class="dir-btn"        data-dir="random"    title="Random">?</button>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="ctrl-group">
+      <label>SWING</label>
+      <input id="swing-slider" type="range" min="0" max="75" value="0" />
+      <span id="swing-val" class="val-readout">0%</span>
+    </div>
+
+    <div class="ctrl-group">
+      <label>GATE</label>
+      <input id="gate-slider" type="range" min="1" max="100" value="50" />
+      <span id="gate-val" class="val-readout">50%</span>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="ctrl-group">
+      <label>SCALE</label>
+      <select id="scale-select"></select>
+    </div>
+    <div class="ctrl-group">
+      <label>ROOT</label>
+      <select id="root-select"></select>
+    </div>
+    <div class="ctrl-group">
+      <label>XPOSE</label>
+      <input id="transpose-input" type="number" min="-24" max="24" value="0" style="width:44px;text-align:center;font-family:var(--font-mono)" />
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="ctrl-group">
+      <label>STEPS</label>
+      <input id="step-count-input" type="number" min="1" max="64" value="64" style="width:48px;text-align:center;font-family:var(--font-mono)" />
+    </div>
+    <div class="ctrl-group">
+      <label>LOOP</label>
+      <input id="loop-start-input" type="number" min="1" max="64" value="1"  style="width:44px;text-align:center;font-family:var(--font-mono)" />
+      <span style="color:var(--text-dim)">–</span>
+      <input id="loop-end-input"   type="number" min="1" max="64" value="64" style="width:44px;text-align:center;font-family:var(--font-mono)" />
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="ctrl-group">
+      <label>CH</label>
+      <input id="channel-input" type="number" min="1" max="16" value="1" style="width:40px;text-align:center;font-family:var(--font-mono)" />
+    </div>
+
+    <div class="ctrl-group">
+      <label>CC</label>
+      <input id="cc-toggle" type="checkbox" />
+      <input id="cc-number-input" type="number" min="0" max="127" value="74" style="width:40px;font-family:var(--font-mono)" title="CC number" />
+    </div>
+  </div>
+
+  <!-- ── Main ──────────────────────────────────────────────────────── -->
+  <div id="main">
+
+    <!--
+      Layout:
+        Left column: piano keys (fixed width, vertical scroll driven by JS)
+        Right column: all horizontal-scrolling canvases stacked vertically
+          - piano roll grid
+          - velocity lane
+          - cc lane
+          - glide lane
+          - substep lane
+    -->
+    <div id="grid-area">
+
+      <!-- Fixed left column: piano keys -->
+      <div id="piano-keys-wrapper">
+        <canvas id="piano-keys-canvas"></canvas>
+      </div>
+
+      <!-- Right column: horizontally scrollable, contains all lanes -->
+      <div id="lanes-scroll">
+
+        <!-- Piano roll canvases -->
+        <div id="grid-canvas-container">
+          <canvas id="canvas-bg"></canvas>
+          <canvas id="canvas-content"></canvas>
+          <canvas id="canvas-playhead"></canvas>
+        </div>
+
+        <!-- Velocity lane -->
+        <div class="lane-row" id="velocity-lane-row">
+          <div class="lane-row-label">VEL</div>
+          <canvas id="velocity-canvas"></canvas>
+        </div>
+
+        <!-- CC lane (hidden by default) -->
+        <div class="lane-row" id="cc-lane-row" style="display:none">
+          <div class="lane-row-label">CC</div>
+          <canvas id="cc-canvas"></canvas>
+        </div>
+
+        <!-- Glide lane -->
+        <div class="lane-row" id="glide-row">
+          <div class="lane-row-label">GLIDE</div>
+          <canvas id="glide-canvas"></canvas>
+        </div>
+
+        <!-- Substep lane -->
+        <div class="lane-row" id="substep-row">
+          <div class="lane-row-label">SUB</div>
+          <canvas id="substep-canvas"></canvas>
+        </div>
+
+      </div><!-- /#lanes-scroll -->
+
+    </div><!-- /#grid-area -->
+
+  </div><!-- /#main -->
+
+</div><!-- /#app -->
+
+<!-- ── Step editor sidebar ───────────────────────────────────────── -->
+<div id="step-editor">
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <h3>Step <span id="step-editor-title">–</span></h3>
+    <button id="close-step-editor">✕</button>
+  </div>
+
+  <div class="step-editor-row">
+    <label>Velocity</label>
+    <div class="row-inner">
+      <input id="step-velocity" type="range" min="0" max="127" value="100" />
+      <span id="step-velocity-val" class="val-readout">100</span>
+    </div>
+  </div>
+
+  <div class="step-editor-row">
+    <label>Probability</label>
+    <div class="row-inner">
+      <input id="step-probability" type="range" min="0" max="100" value="100" />
+      <span id="step-probability-val" class="val-readout">100%</span>
+    </div>
+  </div>
+
+  <div class="step-editor-row">
+    <label>Flags</label>
+    <div class="row-inner">
+      <button id="step-mute">Mute</button>
+      <button id="step-glide">Glide</button>
+    </div>
+  </div>
+
+  <div class="step-editor-row">
+    <label>Substeps</label>
+    <div class="row-inner substep-btns">
+      <button class="substep-btn active" data-value="1">1</button>
+      <button class="substep-btn"        data-value="2">2</button>
+      <button class="substep-btn"        data-value="3">3</button>
+      <button class="substep-btn"        data-value="4">4</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Overlay ────────────────────────────────────────────────────── -->
+<div id="overlay"></div>
+
+<!-- ── Randomize panel ───────────────────────────────────────────── -->
+<div id="randomize-panel">
+  <h3>⚄ Randomize</h3>
+
+  <div class="rand-section">
+    <h4>Notes</h4>
+    <div class="row">
+      <label style="min-width:60px">Low note</label>
+      <input type="number" id="rand-lo-note" min="0" max="127" value="36" style="width:50px;font-family:var(--font-mono)" />
+      <label style="min-width:60px;margin-left:8px">High note</label>
+      <input type="number" id="rand-hi-note" min="0" max="127" value="84" style="width:50px;font-family:var(--font-mono)" />
+    </div>
+    <div class="row">
+      <label style="min-width:60px">Density</label>
+      <input type="range" id="rand-density" min="0" max="100" value="70" />
+      <span id="rand-density-val" class="val-readout">70%</span>
+    </div>
+  </div>
+
+  <div class="rand-section">
+    <h4>Glide</h4>
+    <div class="row">
+      <label style="min-width:60px">Density</label>
+      <input type="range" id="rand-glide-density" min="0" max="100" value="25" />
+      <span id="rand-glide-density-val" class="val-readout">25%</span>
+    </div>
+  </div>
+
+  <div class="rand-section">
+    <h4>Substeps</h4>
+    <div class="row">
+      <label style="min-width:60px">Density</label>
+      <input type="range" id="rand-sub-density" min="0" max="100" value="20" />
+      <span id="rand-sub-density-val" class="val-readout">20%</span>
+    </div>
+  </div>
+
+  <div class="rand-btns">
+    <button id="rand-notes-btn">Notes</button>
+    <button id="rand-glide-btn">Glide</button>
+    <button id="rand-substep-btn">Substeps</button>
+    <button id="rand-all-btn" class="active">All</button>
+  </div>
+  <button id="rand-close" class="close-btn" style="margin-top:8px;width:100%">Close</button>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
