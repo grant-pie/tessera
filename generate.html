@@ -21,81 +21,174 @@
     <a href="generate.html" class="active">Generate</a>
   </nav>
 
-  <!-- ── Main ───────────────────────────────────────────────── -->
-  <div id="gen-main">
-
-    <!-- Left: visualisation -->
-    <div id="gen-left">
-      <div id="gen-section-title">Euclidean Rhythm Generator</div>
-
-      <div id="ring-wrap">
-        <canvas id="ring-canvas"></canvas>
-      </div>
-
-      <div id="strip-wrap">
-        <div id="strip-label">Pattern</div>
-        <canvas id="strip-canvas"></canvas>
-      </div>
-    </div>
-
-    <!-- Right: controls -->
-    <div id="gen-right">
-
-      <div class="gen-section">
-        <div class="gen-section-heading">Rhythm</div>
-
-        <div class="gen-row">
-          <label>Steps</label>
-          <input id="gen-steps" type="range" min="1" max="64" value="16" />
-          <span id="gen-steps-val" class="val-readout">16</span>
-        </div>
-
-        <div class="gen-row">
-          <label>Hits</label>
-          <input id="gen-hits" type="range" min="0" max="16" value="5" />
-          <span id="gen-hits-val" class="val-readout">5</span>
-        </div>
-
-        <div class="gen-row">
-          <label>Rotation</label>
-          <input id="gen-rot" type="range" min="0" max="15" value="0" />
-          <span id="gen-rot-val" class="val-readout">0</span>
-        </div>
-      </div>
-
-      <div class="gen-section">
-        <div class="gen-section-heading">Note</div>
-
-        <div class="gen-row">
-          <label>MIDI</label>
-          <input id="gen-note" type="number" min="0" max="127" value="36" />
-          <span class="note-name" id="gen-note-name">C2</span>
-        </div>
-
-        <div class="gen-row">
-          <label>Velocity</label>
-          <input id="gen-vel" type="range" min="1" max="127" value="100" />
-          <span id="gen-vel-val" class="val-readout">100</span>
-        </div>
-
-        <div class="gen-row">
-          <label>Glide</label>
-          <button id="gen-glide-btn">Glide: OFF</button>
-        </div>
-      </div>
-
-      <div class="gen-section">
-        <div class="gen-actions">
-          <button id="gen-send-btn">→ Send to Sequencer</button>
-          <button id="gen-download-btn">↓ Download Preset</button>
-        </div>
-      </div>
-
-    </div>
+  <!-- ── Generator tabs ─────────────────────────────────────── -->
+  <div id="gen-tab-bar">
+    <button class="gen-tab active" data-panel="euclid-panel">Euclidean</button>
+    <button class="gen-tab"        data-panel="markov-panel">Markov Chain</button>
   </div>
 
-</div>
+  <!-- ── Panels ─────────────────────────────────────────────── -->
+  <div id="gen-panels">
+
+    <!-- ── Euclidean ────────────────────────────────────────── -->
+    <div id="euclid-panel" class="gen-panel">
+      <div class="gen-split">
+
+        <!-- Left: visualisation -->
+        <div class="gen-left">
+          <div class="gen-vis-title">Euclidean Rhythm Generator</div>
+
+          <div id="ring-wrap">
+            <canvas id="ring-canvas"></canvas>
+          </div>
+
+          <div class="strip-wrap">
+            <div class="strip-label">Pattern</div>
+            <canvas id="strip-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Right: controls -->
+        <div class="gen-right">
+
+          <div class="gen-section">
+            <div class="gen-section-heading">Rhythm</div>
+            <div class="gen-row">
+              <label>Steps</label>
+              <input id="gen-steps" type="range" min="1" max="64" value="16" />
+              <span id="gen-steps-val" class="val-readout">16</span>
+            </div>
+            <div class="gen-row">
+              <label>Hits</label>
+              <input id="gen-hits" type="range" min="0" max="16" value="5" />
+              <span id="gen-hits-val" class="val-readout">5</span>
+            </div>
+            <div class="gen-row">
+              <label>Rotation</label>
+              <input id="gen-rot" type="range" min="0" max="15" value="0" />
+              <span id="gen-rot-val" class="val-readout">0</span>
+            </div>
+          </div>
+
+          <div class="gen-section">
+            <div class="gen-section-heading">Note</div>
+            <div class="gen-row">
+              <label>MIDI</label>
+              <input id="gen-note" type="number" min="0" max="127" value="36" />
+              <span class="note-chip" id="gen-note-name">C2</span>
+            </div>
+            <div class="gen-row">
+              <label>Velocity</label>
+              <input id="gen-vel" type="range" min="1" max="127" value="100" />
+              <span id="gen-vel-val" class="val-readout">100</span>
+            </div>
+            <div class="gen-row">
+              <label>Glide</label>
+              <button id="gen-glide-btn">Glide: OFF</button>
+            </div>
+          </div>
+
+          <div class="gen-section gen-actions-section">
+            <button id="gen-send-btn" class="gen-send-btn">→ Send to Sequencer</button>
+            <button id="gen-download-btn" class="gen-dl-btn">↓ Download Preset</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Markov Chain ──────────────────────────────────────── -->
+    <div id="markov-panel" class="gen-panel" style="display:none">
+      <div class="gen-split">
+
+        <!-- Left: visualisation -->
+        <div class="gen-left">
+          <div class="gen-vis-title">Markov Chain Sequencer</div>
+
+          <div id="markov-vis-wrap">
+            <canvas id="markov-vis-canvas"></canvas>
+          </div>
+
+          <div class="strip-wrap">
+            <div class="strip-label">Generated Pattern</div>
+            <canvas id="markov-strip-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Right: controls -->
+        <div class="gen-right">
+
+          <!-- Notes -->
+          <div class="gen-section">
+            <div class="gen-section-heading">Notes
+              <button id="mk-add-note-btn" class="add-note-btn" title="Add note (max 8)">+ Add</button>
+            </div>
+            <div id="markov-notes-list"></div>
+          </div>
+
+          <!-- Transition matrix -->
+          <div class="gen-section">
+            <div class="gen-section-heading">Transition Weights <span class="matrix-hint">(0 = never)</span></div>
+            <div id="markov-matrix-wrap" class="matrix-scroll"></div>
+          </div>
+
+          <!-- Options -->
+          <div class="gen-section">
+            <div class="gen-section-heading">Options</div>
+            <div class="gen-row">
+              <label>Steps</label>
+              <input id="mk-steps" type="range" min="4" max="64" value="16" />
+              <span id="mk-steps-val" class="val-readout">16</span>
+            </div>
+            <div class="gen-row">
+              <label>Rest %</label>
+              <input id="mk-rest" type="range" min="0" max="50" value="10" />
+              <span id="mk-rest-val" class="val-readout">10%</span>
+            </div>
+            <div class="gen-row">
+              <label>Velocity</label>
+              <input id="mk-vel" type="range" min="1" max="127" value="100" />
+              <span id="mk-vel-val" class="val-readout">100</span>
+            </div>
+            <div class="gen-row">
+              <label>Vel ±</label>
+              <input id="mk-var" type="range" min="0" max="40" value="15" />
+              <span id="mk-var-val" class="val-readout">±15</span>
+            </div>
+            <div class="gen-row">
+              <label>Glide</label>
+              <button id="mk-glide-btn">Glide: OFF</button>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="gen-section gen-actions-section">
+            <button id="mk-generate-btn" class="gen-generate-btn">⚄ Generate</button>
+            <button id="mk-send-btn" class="gen-send-btn">→ Send to Sequencer</button>
+            <button id="mk-download-btn" class="gen-dl-btn">↓ Download Preset</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /#gen-panels -->
+
+</div><!-- /#gen-page -->
 
 <script type="module" src="src/generate/euclidean-ui.js"></script>
+<script type="module" src="src/generate/markov-ui.js"></script>
+<script>
+  // Tab switching
+  document.querySelectorAll('.gen-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.gen-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.gen-panel').forEach(p => { p.style.display = 'none'; });
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.panel).style.display = 'flex';
+      document.dispatchEvent(new CustomEvent('genTabActivated', { detail: btn.dataset.panel }));
+    });
+  });
+</script>
 </body>
 </html>

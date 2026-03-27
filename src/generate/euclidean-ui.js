@@ -264,6 +264,11 @@ function init() {
   ro.observe(document.getElementById('ring-wrap'));
   ro.observe(document.getElementById('strip-canvas'));
 
+  // Re-render when tab is activated (canvas was hidden, size was 0)
+  document.addEventListener('genTabActivated', e => {
+    if (e.detail === 'euclid-panel') render();
+  });
+
   // Initial render
   syncHitsMax();
   noteName.textContent = midiToName(gen.note);

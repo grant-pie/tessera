@@ -5,26 +5,69 @@
   overflow: hidden;
 }
 
-#gen-main {
-  flex: 1;
+/* ── Tab bar ─────────────────────────────────────────────────── */
+#gen-tab-bar {
+  flex: 0 0 auto;
   display: flex;
-  overflow: hidden;
-  padding: 24px;
-  gap: 24px;
-  align-items: flex-start;
+  align-items: stretch;
+  gap: 0;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
 }
 
-/* ── Left column: visualisation ──────────────────────────────── */
-#gen-left {
+.gen-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0 16px;
+  height: 36px;
+  cursor: pointer;
+  transition: color 0.1s;
+}
+.gen-tab:hover  { color: var(--text-primary); background: none; }
+.gen-tab.active { color: var(--accent-bright); border-bottom-color: var(--accent); }
+
+/* ── Panels container ────────────────────────────────────────── */
+#gen-panels {
+  flex: 1;
+  overflow: hidden;
+}
+
+.gen-panel {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Split layout (left vis + right controls) ────────────────── */
+.gen-split {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  padding: 20px;
+  gap: 20px;
+}
+
+/* ── Left: visualisation ─────────────────────────────────────── */
+.gen-left {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   min-width: 0;
+  overflow: hidden;
 }
 
-#gen-section-title {
+.gen-vis-title {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -33,45 +76,56 @@
   align-self: flex-start;
 }
 
+/* Euclidean ring */
 #ring-wrap {
   width: 100%;
-  max-width: 300px;
+  max-width: 280px;
   aspect-ratio: 1;
-  position: relative;
 }
-
 #ring-canvas {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-#strip-wrap {
+/* Markov pitch trace */
+#markov-vis-wrap {
   width: 100%;
-  max-width: 640px;
+  flex: 1;
+  min-height: 120px;
+  max-height: 300px;
+}
+#markov-vis-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
-#strip-label {
+/* Strip (shared) */
+.strip-wrap {
+  width: 100%;
+  max-width: 100%;
+}
+.strip-label {
   font-size: 10px;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
-
-#strip-canvas {
+#strip-canvas,
+#markov-strip-canvas {
   width: 100%;
   height: 28px;
   display: block;
 }
 
-/* ── Right column: controls ──────────────────────────────────── */
-#gen-right {
+/* ── Right: controls panel ───────────────────────────────────── */
+.gen-right {
   width: 300px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 0;
   background: var(--bg-1);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -79,13 +133,11 @@
 }
 
 .gen-section {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
-
-.gen-section:last-child {
-  border-bottom: none;
-}
+.gen-section:last-child { border-bottom: none; }
 
 .gen-section-heading {
   font-size: 10px;
@@ -93,22 +145,22 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-dim);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .gen-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
-
-.gen-row:last-child {
-  margin-bottom: 0;
-}
+.gen-row:last-child { margin-bottom: 0; }
 
 .gen-row label {
-  width: 48px;
+  width: 52px;
   flex-shrink: 0;
   font-size: 10px;
   text-transform: uppercase;
@@ -121,8 +173,8 @@
   accent-color: var(--accent);
 }
 
-.gen-row .val-readout {
-  width: 36px;
+.val-readout {
+  width: 38px;
   text-align: right;
   font-family: var(--font-mono);
   font-size: 11px;
@@ -131,34 +183,32 @@
 }
 
 .gen-row input[type="number"] {
-  width: 54px;
+  width: 52px;
   font-family: var(--font-mono);
   font-size: 11px;
   text-align: center;
 }
 
-.note-name {
+.note-chip {
   font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--accent-bright);
-  width: 36px;
-}
-
-/* Glide toggle */
-#gen-glide-btn {
-  font-size: 11px;
-  padding: 4px 12px;
+  width: 34px;
 }
 
 /* Action buttons */
-.gen-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.gen-actions-section { display: flex; flex-direction: column; gap: 7px; }
 
-#gen-send-btn {
+.gen-generate-btn {
+  padding: 7px;
+  font-size: 11px;
+  color: var(--amber);
+  border-color: var(--amber-dim);
+}
+.gen-generate-btn:hover { border-color: var(--amber); }
+
+.gen-send-btn {
   background: var(--accent-dim);
   border-color: var(--accent);
   color: var(--accent-bright);
@@ -166,13 +216,124 @@
   padding: 8px;
   font-size: 12px;
 }
+.gen-send-btn:hover { background: var(--accent); color: #fff; }
 
-#gen-send-btn:hover {
-  background: var(--accent);
-  color: #fff;
+.gen-dl-btn { padding: 7px; font-size: 11px; }
+
+/* ── Markov: notes list ──────────────────────────────────────── */
+.add-note-btn {
+  font-size: 10px;
+  padding: 2px 7px;
+  margin-left: auto;
+  color: var(--green);
+  border-color: var(--green-dim);
+}
+.add-note-btn:hover { border-color: var(--green); }
+
+.markov-note-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+.markov-note-row:last-child { margin-bottom: 0; }
+
+.markov-note-name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-bright);
+  width: 32px;
+  flex-shrink: 0;
 }
 
-#gen-download-btn {
-  padding: 7px;
+.markov-note-input {
+  width: 52px;
+  font-family: var(--font-mono);
   font-size: 11px;
+  text-align: center;
+}
+
+.markov-rm-btn {
+  font-size: 10px;
+  padding: 2px 5px;
+  color: var(--red);
+  border-color: transparent;
+  background: none;
+}
+.markov-rm-btn:hover { border-color: var(--red); background: var(--red-dim); }
+
+/* ── Markov: transition matrix ───────────────────────────────── */
+.matrix-hint {
+  font-size: 9px;
+  color: var(--text-dim);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.matrix-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.markov-matrix {
+  border-collapse: collapse;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.markov-matrix th,
+.markov-matrix td {
+  padding: 2px 3px;
+  text-align: center;
+}
+
+.markov-matrix thead th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-bright);
+  padding-bottom: 4px;
+}
+
+.markov-matrix .matrix-corner {
+  color: var(--text-dim);
+  font-size: 9px;
+  text-align: left;
+  padding-right: 6px;
+  font-family: var(--font);
+  font-weight: 400;
+}
+
+.markov-matrix tbody th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: right;
+  padding-right: 6px;
+}
+
+.markov-matrix td input {
+  width: 30px;
+  height: 26px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 0;
+}
+
+.markov-matrix td input.diag {
+  background: var(--bg-2);
+  color: var(--text-dim);
+}
+
+.markov-matrix td input:focus {
+  outline: 1px solid var(--accent);
+  border-color: var(--accent);
 }
