@@ -357,20 +357,24 @@ function _triggerSnare(velocity, at) {
   noise.stop(at + 0.23);
 }
 
-function _noteOn(note, velocity, audioTime) {
+/**
+ * Core note-on dispatcher. `presetId` overrides the global currentPreset,
+ * allowing per-track preset ports to trigger with their own sound.
+ */
+function _noteOnWithPreset(presetId, note, velocity, audioTime) {
   const ctx = getAudioCtx();
   const at = Math.max(audioTime, ctx.currentTime + 0.001);
 
   // Drums are fire-and-forget — no voice tracking needed
-  if (currentPreset === 'kick')         { _triggerKick(velocity, at);         return; }
-  if (currentPreset === 'snare')        { _triggerSnare(velocity, at);        return; }
-  if (currentPreset === 'hihat-closed') { _triggerHihatClosed(velocity, at);  return; }
-  if (currentPreset === 'hihat-open')   { _triggerHihatOpen(velocity, at);    return; }
+  if (presetId === 'kick')         { _triggerKick(velocity, at);         return; }
+  if (presetId === 'snare')        { _triggerSnare(velocity, at);        return; }
+  if (presetId === 'hihat-closed') { _triggerHihatClosed(velocity, at);  return; }
+  if (presetId === 'hihat-open')   { _triggerHihatOpen(velocity, at);    return; }
 
-  // If note is already playing, stop it cleanly first
+  // If note is already playing (same voice key), stop it cleanly first
   _noteOff(note, audioTime);
 
-  const preset = PRESETS[currentPreset] || PRESETS.pad;
+  const preset = PRESETS[presetId] || PRESETS.pad;
   const freq = midiToHz(note);
   const vol = (velocity / 127) * preset.gain;
 
@@ -402,12 +406,10 @@ function _noteOn(note, velocity, audioTime) {
   // Oscillator 2
   const osc2 = ctx.createOscillator();
   osc2.type = preset.osc2Type;
-  // osc2Detune is in cents; osc2SemiOffset shifts the frequency
   const semiOffset = preset.osc2SemiOffset || 0;
   osc2.frequency.value = freq * Math.pow(2, semiOffset / 12);
   osc2.detune.value = preset.osc2Detune;
 
-  // Routing: oscs → filter → vca → master
   osc1.connect(filter);
   osc2.connect(filter);
   filter.connect(vca);
@@ -417,6 +419,10 @@ function _noteOn(note, velocity, audioTime) {
   osc2.start(at);
 
   voices.set(note, { osc1, osc2, filter, vca, preset });
+}
+
+function _noteOn(note, velocity, audioTime) {
+  _noteOnWithPreset(currentPreset, note, velocity, audioTime);
 }
 
 function _noteOff(note, audioTime) {
@@ -462,9 +468,45 @@ export function setReverbAmount(amount) {
   if (reverbWet) reverbWet.gain.value = amount;
 }
 
+// ── Per-preset port factory ───────────────────────────────────
+
+function _makeSendFn(presetId) {
+  return function send(data, time) {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const status   = data[0];
+    const type     = status & 0xF0;
+    const note     = data[1];
+    const velocity = data[2];
+    const audioTime = time ? toAudioTime(time) : ctx.currentTime;
+
+    if (type === 0x90 && velocity > 0) {
+      _noteOnWithPreset(presetId, note, velocity, audioTime);
+    } else if (type === 0x80 || (type === 0x90 && velocity === 0)) {
+      _noteOff(note, audioTime);
+    } else if (type === 0xB0 && note === 123) {
+      _allNotesOff();
+    }
+  };
+}
+
+const _portCache = new Map();
+
+/**
+ * Returns a MIDIOutput-compatible port that always triggers with `presetId`,
+ * regardless of the global currentPreset. Ports are cached by presetId.
+ */
+export function getFactoryPortForPreset(presetId) {
+  if (!_portCache.has(presetId)) {
+    _portCache.set(presetId, { id: BUILTIN_ID, name: BUILTIN_NAME, send: _makeSendFn(presetId) });
+  }
+  return _portCache.get(presetId);
+}
+
 /**
  * The factory port object — drop-in replacement for a Web MIDI output port.
- * Implements the subset of MIDIOutput needed by midi-output.js
+ * Uses the global currentPreset (set via setPreset / the SYNTH dropdown).
  */
 export const factoryPort = {
   id: BUILTIN_ID,

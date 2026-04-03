@@ -3,6 +3,7 @@ import { nextStepForTrack, getActiveNotesForTrack, getStepDuration, resetCursor 
 import { fireStep, allTracksOff, sendCC, noteOn, noteOff } from '../midi/midi-output.js';
 import { get, set } from '../state/state.js';
 import { getOutputById } from '../midi/midi-access.js';
+import { getFactoryPortForPreset, BUILTIN_ID } from '../audio/factory-sound-engine.js';
 import { switchToSceneImmediate } from '../scenes/scene-manager.js';
 
 // Per-track cursor state — not in reactive state to avoid flooding stateChange events
@@ -49,6 +50,7 @@ function getTrackConfig(state, trackIndex) {
       id:          track.id,
       midiChannel: state.transport.midiChannel,
       midiOutputId: track.midiOutputId,
+      synthPreset: track.synthPreset,
       mute:        track.mute,
       direction:   state.transport.direction,
       stepCount:   state.transport.stepCount,
@@ -64,6 +66,7 @@ function getTrackConfig(state, trackIndex) {
     id:          track.id,
     midiChannel: track.midiChannel,
     midiOutputId: track.midiOutputId,
+    synthPreset: track.synthPreset,
     mute:        track.mute,
     direction:   track.direction,
     stepCount:   track.stepCount,
@@ -74,6 +77,20 @@ function getTrackConfig(state, trackIndex) {
     ccLane:      track.ccLane,
     steps:       track.steps,
   };
+}
+
+/**
+ * Resolve the MIDI output port for a track config.
+ * If the track (or global output) is the built-in synth AND the track has a
+ * synthPreset set, return a preset-bound factory port so each track triggers
+ * its own sound regardless of the global SYNTH selector.
+ */
+function _resolvePort(cfg, state) {
+  const outputId = cfg.midiOutputId || state.midi.outputId;
+  if (cfg.synthPreset && outputId === BUILTIN_ID) {
+    return getFactoryPortForPreset(cfg.synthPreset);
+  }
+  return getOutputById(outputId);
 }
 
 // ── Transport ─────────────────────────────────────────────────
@@ -90,10 +107,11 @@ function handleTransport({ type }) {
 
 function handleStop() {
   const state = get();
-  const globalPort = getOutputById(state.midi.outputId);
-  allTracksOff(state.tracks, (track) =>
-    track.midiOutputId ? getOutputById(track.midiOutputId) : globalPort
-  );
+  allTracksOff(state.tracks, (track) => {
+    const outputId = track.midiOutputId || state.midi.outputId;
+    if (track.synthPreset && outputId === BUILTIN_ID) return getFactoryPortForPreset(track.synthPreset);
+    return getOutputById(outputId);
+  });
   set('transport.playing', false);
   set('cursor.step', -1);
   emit('sequencer:step', { step: -1 });
@@ -153,9 +171,7 @@ function handleTick({ tickTime }) {
     if (!stepData) return;
 
     const noteOffTime = tickTime + stepDuration * cfg.gateLength;
-    const port = cfg.midiOutputId
-      ? getOutputById(cfg.midiOutputId)
-      : getOutputById(state.midi.outputId);
+    const port = _resolvePort(cfg, state);
 
     if (stepData.substeps > 1 && !stepData.glide) {
       fireSubstepsForTrack(cfg, stepData, stepDuration, tickTime, port);

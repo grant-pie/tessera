@@ -25,6 +25,7 @@
   <div id="gen-tab-bar">
     <button class="gen-tab active" data-panel="euclid-panel">Euclidean</button>
     <button class="gen-tab"        data-panel="markov-panel">Markov Chain</button>
+    <button class="gen-tab"        data-panel="drums-panel">Drums</button>
   </div>
 
   <!-- ── Panels ─────────────────────────────────────────────── -->
@@ -172,12 +173,35 @@
       </div>
     </div>
 
+    <!-- ── Drums ───────────────────────────────────────────────── -->
+    <div id="drums-panel" class="gen-panel" style="display:none">
+      <div class="drum-layout">
+
+        <!-- Global bar -->
+        <div class="drum-global-bar">
+          <div class="drum-bpm-group">
+            <label>BPM</label>
+            <input id="drum-bpm" type="number" min="20" max="300" value="120" />
+          </div>
+          <div class="drum-global-actions">
+            <button id="drum-randomize-btn" class="gen-generate-btn">⚄ Randomize</button>
+            <button id="drum-send-btn" class="gen-send-btn">→ Send to Sequencer</button>
+          </div>
+        </div>
+
+        <!-- Voice rows (injected by drum-ui.js) -->
+        <div id="drum-voices-container" class="drum-voices"></div>
+
+      </div>
+    </div>
+
   </div><!-- /#gen-panels -->
 
 </div><!-- /#gen-page -->
 
 <script type="module" src="src/generate/euclidean-ui.js"></script>
 <script type="module" src="src/generate/markov-ui.js"></script>
+<script type="module" src="src/generate/drum-ui.js"></script>
 <script>
   // Tab switching
   document.querySelectorAll('.gen-tab').forEach(btn => {

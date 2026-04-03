@@ -29,6 +29,7 @@ export function defaultTrack(index) {
     name: `Track ${index + 1}`,
     color: TRACK_COLORS[index % TRACK_COLORS.length],
     midiOutputId: null,   // null = use global output from toolbar
+    synthPreset: null,    // null = use global SYNTH selector; set to a preset id for per-track sound
     midiChannel: Math.min(16, index + 1),
     mute: false,
     solo: false,

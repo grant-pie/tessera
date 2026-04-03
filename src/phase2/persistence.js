@@ -1,5 +1,6 @@
 import { get, set, setStep } from '../state/state.js';
-import { defaultStep } from '../state/defaults.js';
+import { defaultStep, defaultTrack } from '../state/defaults.js';
+import { loadTrackIntoState } from '../scenes/track-manager.js';
 
 const FILE_VERSION = 1;
 
@@ -125,6 +126,59 @@ export function applyData(data) {
 
   // Sync controls UI to loaded state
   syncControlsUI();
+}
+
+/**
+ * Apply a multi-track pending payload (from drum generator or other multi-track generators).
+ * Format: { version: 2, transport: { bpm, stepCount }, tracks: [ trackData, ... ] }
+ */
+export function applyMultiTrackData(data) {
+  if (!data.tracks?.length) return;
+
+  // Apply global transport fields
+  if (data.transport) {
+    const t = data.transport;
+    if (t.bpm      != null) set('transport.bpm',      t.bpm);
+    if (t.stepCount != null) {
+      set('transport.stepCount', t.stepCount);
+      set('transport.loopEnd',   t.stepCount - 1);
+    }
+  }
+
+  // Build track objects
+  const tracks = data.tracks.map((td, i) => {
+    const base = defaultTrack(i);
+    return {
+      ...base,
+      name:        td.name        ?? base.name,
+      color:       td.color       ?? base.color,
+      synthPreset: td.synthPreset ?? null,
+      midiOutputId: td.midiOutputId ?? null,
+      midiChannel: td.midiChannel ?? base.midiChannel,
+      direction:   td.direction   ?? 'forward',
+      stepCount:   td.stepCount   ?? (data.transport?.stepCount ?? 16),
+      loopStart:   0,
+      loopEnd:     (td.stepCount ?? data.transport?.stepCount ?? 16) - 1,
+      gateLength:  td.gateLength  ?? 0.5,
+      pitch:       td.pitch       ?? base.pitch,
+      ccLane:      td.ccLane      ?? base.ccLane,
+      steps: (() => {
+        const s = Array.from({ length: 64 }, defaultStep);
+        (td.steps || []).forEach((step, idx) => { if (idx < 64) s[idx] = { ...defaultStep(), ...step }; });
+        return s;
+      })(),
+    };
+  });
+
+  set('tracks', tracks);
+  set('activeTrackIndex', 0);
+  loadTrackIntoState(0);
+
+  const el = id => document.getElementById(id);
+  const bpmDisplay = el('bpm-display');
+  if (bpmDisplay && data.transport?.bpm) bpmDisplay.textContent = data.transport.bpm;
+  if (el('step-count-input') && data.transport?.stepCount) el('step-count-input').value = data.transport.stepCount;
+  if (el('loop-end-input')   && data.transport?.stepCount) el('loop-end-input').value   = data.transport.stepCount;
 }
 
 function syncControlsUI() {

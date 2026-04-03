@@ -14,7 +14,7 @@ import { initSceneBar } from './ui/scene-bar.js';
 import { initTrackStrip } from './ui/track-strip.js';
 import { initScenes } from './scenes/scene-manager.js';
 import { get, setStep } from './state/state.js';
-import { save, load, applyData } from './phase2/persistence.js';
+import { save, load, applyData, applyMultiTrackData } from './phase2/persistence.js';
 
 async function main() {
   // 1. MIDI
@@ -68,7 +68,14 @@ async function main() {
   const pending = localStorage.getItem('tessera_pending');
   if (pending) {
     localStorage.removeItem('tessera_pending');
-    try { applyData(JSON.parse(pending)); } catch (e) { console.error('Failed to load pending pattern', e); }
+    try {
+      const data = JSON.parse(pending);
+      if (data.tracks) {
+        applyMultiTrackData(data);
+      } else {
+        applyData(data);
+      }
+    } catch (e) { console.error('Failed to load pending pattern', e); }
   }
 
   // 10. Keyboard shortcuts
