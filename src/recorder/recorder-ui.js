@@ -5,6 +5,7 @@ import { startPlayback, stopPlayback, isPlaying, sendAllNotesOff } from './playb
 import { saveRecording, loadRecording } from './recorder-persistence.js';
 import { getMidiAccess } from '../midi/midi-access.js';
 import { quantize } from './quantize.js';
+import { convertToPattern } from './recorder-to-sequencer.js';
 import { pushHistory, undo, redo } from './recorder-history.js';
 
 function el(id) { return document.getElementById(id); }
@@ -87,6 +88,19 @@ export function initRecorderUI() {
     const subdivision = parseInt(gridSelect.value, 10);
     const strength    = parseInt(strengthSlider.value, 10) / 100;
     quantize(bpm, subdivision, strength);
+  });
+
+  el('rec-send-btn').addEventListener('click', () => {
+    const state = get();
+    if (state.transport.mode !== 'idle') return;
+    if (!state.recording.events.length) return;
+
+    const bpm         = Math.max(20, Math.min(300, parseInt(bpmInput.value, 10) || 120));
+    const subdivision = parseInt(gridSelect.value, 10);
+    const data        = convertToPattern(state.recording.events, bpm, subdivision, state.recording.durationMs);
+
+    localStorage.setItem('tessera_pending', JSON.stringify(data));
+    window.location.href = 'index.html';
   });
 
   // ── Trim ───────────────────────────────────────────────
