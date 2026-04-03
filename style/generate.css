@@ -380,6 +380,86 @@
   color: var(--accent-bright);
 }
 
+.drum-scenes-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+
+.drum-scenes-group label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.drum-scenes-group input[type="number"] {
+  width: 44px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--accent-bright);
+}
+
+/* Fill controls */
+.drum-fill-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+
+.drum-fill-enable-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.drum-fill-enable-wrap input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+}
+
+#drum-fill-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.35;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+#drum-fill-controls.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#drum-fill-controls label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+#drum-fill-length {
+  width: 80px;
+  accent-color: var(--amber);
+}
+
 .drum-global-actions {
   display: flex;
   gap: 8px;
@@ -489,4 +569,20 @@
 .drum-slider-row .val-readout {
   width: 28px;
   font-size: 10px;
+}
+
+/* Fill row — dimmed until fill is enabled */
+.drum-fill-row {
+  opacity: 0.3;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.drum-fill-row.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drum-fill-row input[type="range"] {
+  accent-color: var(--amber);
 }

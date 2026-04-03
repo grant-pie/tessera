@@ -125,6 +125,16 @@
   padding: 2px 4px;
 }
 
+/* ── Synth preset selector ───────────────────────────────────── */
+.track-preset-select {
+  font-size: 10px;
+  max-width: 90px;
+  min-width: 60px;
+  padding: 2px 4px;
+  color: var(--accent-bright);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
 /* ── Mute button ─────────────────────────────────────────────── */
 .track-mute-btn {
   font-size: 9px;

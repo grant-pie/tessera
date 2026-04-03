@@ -183,6 +183,21 @@
             <label>BPM</label>
             <input id="drum-bpm" type="number" min="20" max="300" value="120" />
           </div>
+          <div class="drum-scenes-group">
+            <label>Scenes</label>
+            <input id="drum-scenes" type="number" min="1" max="8" value="1" title="Fill this many scenes with the drum pattern" />
+          </div>
+          <div class="drum-fill-group">
+            <label class="drum-fill-enable-wrap">
+              <input type="checkbox" id="drum-fill-enable" />
+              Fill
+            </label>
+            <div id="drum-fill-controls">
+              <label>Len</label>
+              <input id="drum-fill-length" type="range" min="1" max="16" value="4" />
+              <span id="drum-fill-length-val" class="val-readout">4</span>
+            </div>
+          </div>
           <div class="drum-global-actions">
             <button id="drum-randomize-btn" class="gen-generate-btn">⚄ Randomize</button>
             <button id="drum-send-btn" class="gen-send-btn">→ Send to Sequencer</button>

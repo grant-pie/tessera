@@ -2,8 +2,9 @@ import { get, set } from '../state/state.js';
 import { on } from '../utils/event-bus.js';
 import {
   switchToTrack, addTrack, removeTrack,
-  renameTrack, toggleMute, setTrackOutput, setTrackChannel,
+  renameTrack, toggleMute, setTrackOutput, setTrackChannel, setTrackPreset,
 } from '../scenes/track-manager.js';
+import { BUILTIN_ID, PRESET_NAMES } from '../audio/factory-sound-engine.js';
 
 export function initTrackStrip() {
   _render();
@@ -12,7 +13,8 @@ export function initTrackStrip() {
     if (
       path === 'tracks' ||
       path === 'activeTrackIndex' ||
-      path === 'midi.outputs'
+      path === 'midi.outputs' ||
+      path === 'midi.outputId'
     ) _render();
   });
 
@@ -117,6 +119,34 @@ function _buildCard(track, index, state) {
   });
   outSelect.addEventListener('click', e => e.stopPropagation());
 
+  // ── Synth preset selector (visible only when routing to built-in) ──
+  const effectiveOutputId = track.midiOutputId || state.midi.outputId;
+  const isBuiltin = effectiveOutputId === BUILTIN_ID;
+
+  const presetSelect = document.createElement('select');
+  presetSelect.className = 'track-preset-select';
+  presetSelect.title = 'Built-in synth preset for this track';
+  presetSelect.style.display = isBuiltin ? '' : 'none';
+
+  const globalOpt = document.createElement('option');
+  globalOpt.value = '';
+  globalOpt.textContent = '— Global —';
+  presetSelect.appendChild(globalOpt);
+
+  PRESET_NAMES.forEach(({ id, label }) => {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = label;
+    presetSelect.appendChild(opt);
+  });
+
+  presetSelect.value = track.synthPreset || '';
+  presetSelect.addEventListener('change', (e) => {
+    e.stopPropagation();
+    setTrackPreset(index, e.target.value || null);
+  });
+  presetSelect.addEventListener('click', e => e.stopPropagation());
+
   // ── Mute button ──
   const muteBtn = document.createElement('button');
   muteBtn.className = 'track-mute-btn' + (track.mute ? ' muted' : '');
@@ -131,6 +161,7 @@ function _buildCard(track, index, state) {
   card.appendChild(nameEl);
   card.appendChild(chWrap);
   card.appendChild(outSelect);
+  card.appendChild(presetSelect);
   card.appendChild(muteBtn);
 
   return card;

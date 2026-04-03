@@ -174,6 +174,24 @@ export function applyMultiTrackData(data) {
   set('activeTrackIndex', 0);
   loadTrackIntoState(0);
 
+  // Populate multiple scenes with the same drum tracks
+  const sceneCount = Math.max(1, Math.min(8, data.sceneCount ?? 1));
+  if (sceneCount > 1) {
+    const scenes = get().scenes.slice();
+    for (let i = 0; i < sceneCount; i++) {
+      scenes[i] = {
+        ...(scenes[i] || {}),
+        tracks: tracks.map(t => ({
+          ...t,
+          steps: t.steps.map(s => ({ ...s, notes: [...s.notes] })),
+        })),
+        swing: get().transport.swing,
+      };
+    }
+    set('scenes', scenes);
+    set('activeSceneIndex', 0);
+  }
+
   const el = id => document.getElementById(id);
   const bpmDisplay = el('bpm-display');
   if (bpmDisplay && data.transport?.bpm) bpmDisplay.textContent = data.transport.bpm;

@@ -183,6 +183,17 @@ export function setTrackOutput(trackIndex, outputId) {
 }
 
 /**
+ * Set the per-track built-in synth preset.
+ * Pass null to fall back to the global preset selector.
+ */
+export function setTrackPreset(trackIndex, presetId) {
+  const tracks = get().tracks.map((t, i) =>
+    i === trackIndex ? { ...t, synthPreset: presetId || null } : t
+  );
+  set('tracks', tracks);
+}
+
+/**
  * Set the per-track MIDI channel.
  */
 export function setTrackChannel(trackIndex, channel) {
