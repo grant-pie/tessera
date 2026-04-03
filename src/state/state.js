@@ -1,5 +1,5 @@
 import { emit } from '../utils/event-bus.js';
-import { defaultPattern } from './defaults.js';
+import { defaultPattern, defaultScene, defaultTrack } from './defaults.js';
 
 let state = {
   transport: {
@@ -41,6 +41,17 @@ let state = {
     gridScrollTop: 48, // start around middle C area (MIDI 48 = C3)
     viewRangeNotes: 24,
     activeNotes: new Set(),
+  },
+  tracks: [defaultTrack(0)],
+  activeTrackIndex: 0,
+  scenes: Array.from({ length: 8 }, (_, i) => defaultScene(i)),
+  activeSceneIndex: 0,
+  song: {
+    enabled: false,
+    entries: [],        // [{ sceneIndex: number, repeats: number }]
+    activeEntry: 0,
+    currentRepeat: 0,
+    queuedSceneIndex: null,
   },
   // Phase 2 stubs
   patterns: [],

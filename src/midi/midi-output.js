@@ -1,100 +1,130 @@
 import { getOutput } from './midi-access.js';
 
-// Track notes that are currently on per channel so we can send proper note-offs
-const activeNotes = new Map(); // channel -> Set of note numbers
-let previousStepNotes = [];
-let previousStepGlide = false;
+// Per-channel active note tracking (channel -> Set<note>)
+const activeNotes = new Map();
 
-export function noteOn(channel, note, velocity, time) {
-  const port = getOutput();
-  if (!port) return;
+// Per-track glide state (trackKey -> { previousNotes, previousGlide })
+const glideState = new Map();
+
+function getGlide(trackKey) {
+  if (!glideState.has(trackKey)) {
+    glideState.set(trackKey, { previousNotes: [], previousGlide: false });
+  }
+  return glideState.get(trackKey);
+}
+
+export function noteOn(channel, note, velocity, time, port) {
+  const p = port ?? getOutput();
+  if (!p) return;
 
   const ch = (channel - 1) & 0x0F;
-  port.send([0x90 | ch, note & 0x7F, velocity & 0x7F], time);
+  p.send([0x90 | ch, note & 0x7F, velocity & 0x7F], time);
 
   if (!activeNotes.has(channel)) activeNotes.set(channel, new Set());
   activeNotes.get(channel).add(note);
 }
 
-export function noteOff(channel, note, time) {
-  const port = getOutput();
-  if (!port) return;
+export function noteOff(channel, note, time, port) {
+  const p = port ?? getOutput();
+  if (!p) return;
 
   const ch = (channel - 1) & 0x0F;
-  port.send([0x80 | ch, note & 0x7F, 0], time);
+  p.send([0x80 | ch, note & 0x7F, 0], time);
 
   activeNotes.get(channel)?.delete(note);
 }
 
-export function sendCC(channel, ccNumber, value, time) {
-  const port = getOutput();
-  if (!port) return;
+export function sendCC(channel, ccNumber, value, time, port) {
+  const p = port ?? getOutput();
+  if (!p) return;
 
   const ch = (channel - 1) & 0x0F;
-  port.send([0xB0 | ch, ccNumber & 0x7F, value & 0x7F], time);
+  p.send([0xB0 | ch, ccNumber & 0x7F, value & 0x7F], time);
 }
 
-export function allNotesOff(channel) {
-  const port = getOutput();
-  if (!port) return;
+export function allNotesOff(channel, port, trackKey) {
+  const p = port ?? getOutput();
+  if (!p) return;
 
   const ch = (channel - 1) & 0x0F;
-  port.send([0xB0 | ch, 123, 0]); // All Notes Off CC
+  p.send([0xB0 | ch, 123, 0]); // All Notes Off CC
   activeNotes.get(channel)?.clear();
-  previousStepNotes = [];
+
+  if (trackKey !== undefined) {
+    const g = getGlide(trackKey);
+    g.previousNotes = [];
+    g.previousGlide = false;
+  }
 }
 
 /**
- * Fire a step: sends note-offs for previous step (unless glide), then note-ons for current step.
- * @param {number} channel
- * @param {number[]} notes - MIDI note numbers to play
- * @param {number} velocity
- * @param {boolean} glide - if true, overlap with previous notes (legato)
- * @param {number} tickTime - DOMHighResTimeStamp for scheduling
- * @param {number} noteOffTime - when to send note-off
+ * Send all-notes-off to every known track. Called on transport stop.
+ * @param {Array} tracks - array of track objects from state
+ * @param {Function} getPortFn - (track) => MIDIOutput | null
  */
-export function fireStep(channel, notes, velocity, glide, tickTime, noteOffTime) {
+export function allTracksOff(tracks, getPortFn) {
+  tracks.forEach(track => {
+    const port = getPortFn(track);
+    if (port) {
+      const ch = (track.midiChannel - 1) & 0x0F;
+      port.send([0xB0 | ch, 123, 0]);
+    }
+  });
+  glideState.clear();
+  activeNotes.clear();
+}
+
+/**
+ * Fire a step for a specific track.
+ * @param {number}  channel
+ * @param {number[]} notes
+ * @param {number}  velocity
+ * @param {boolean} glide
+ * @param {number}  tickTime
+ * @param {number}  noteOffTime
+ * @param {object|null} port      - MIDIOutput port (null = use global)
+ * @param {*}       trackKey      - unique key per track for glide state isolation
+ */
+export function fireStep(channel, notes, velocity, glide, tickTime, noteOffTime, port, trackKey = 0) {
+  const g = getGlide(trackKey);
   const hasNotes = notes.length > 0;
-  const comingFromGlide = previousStepGlide && hasNotes;
+  const comingFromGlide = g.previousGlide && hasNotes;
 
   if (comingFromGlide) {
-    // Glide/portamento transition:
-    // Send note-on for NEW pitches first, while previous notes are still held.
-    // On slide synths (Monologue, 303 etc.) this overlap is what triggers portamento.
     for (const note of notes) {
-      if (!previousStepNotes.includes(note)) {
-        noteOn(channel, note, velocity, tickTime);
+      if (!g.previousNotes.includes(note)) {
+        noteOn(channel, note, velocity, tickTime, port);
       }
-      // Same note continuing — no note-on, no note-off (seamless hold)
+      // Same note continuing — seamless hold, no note-on/off
     }
-    // Release previous notes that aren't continuing
-    for (const note of previousStepNotes) {
+    for (const note of g.previousNotes) {
       if (!notes.includes(note)) {
-        noteOff(channel, note, tickTime);
+        noteOff(channel, note, tickTime, port);
       }
     }
   } else {
-    // Normal step: close previous notes, then open new ones
-    for (const note of previousStepNotes) {
-      noteOff(channel, note, tickTime);
+    for (const note of g.previousNotes) {
+      noteOff(channel, note, tickTime, port);
     }
     for (const note of notes) {
-      noteOn(channel, note, velocity, tickTime);
+      noteOn(channel, note, velocity, tickTime, port);
     }
   }
 
-  // Schedule note-offs — unless this step is gliding (hold into next step)
   if (!glide && hasNotes) {
     for (const note of notes) {
-      noteOff(channel, note, noteOffTime);
+      noteOff(channel, note, noteOffTime, port);
     }
   }
 
-  previousStepNotes = hasNotes ? [...notes] : [];
-  previousStepGlide = glide && hasNotes;
+  g.previousNotes = hasNotes ? [...notes] : [];
+  g.previousGlide = glide && hasNotes;
 }
 
-export function resetGlideState() {
-  previousStepNotes = [];
-  previousStepGlide = false;
+export function resetGlideState(trackKey = 0) {
+  glideState.delete(trackKey);
+}
+
+export function resetAllGlideStates() {
+  glideState.clear();
 }

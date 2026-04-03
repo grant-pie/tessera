@@ -3,6 +3,7 @@ import { on } from '../utils/event-bus.js';
 import { SCALE_NAMES } from '../engine/scale.js';
 import * as clock from '../clock/clock.js';
 import { getInput } from '../midi/midi-access.js';
+import { BUILTIN_ID, PRESET_NAMES, setPreset, getPreset } from '../audio/factory-sound-engine.js';
 
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 
@@ -115,6 +116,8 @@ export function initControls() {
     });
     outputSelect.value = s.midi.outputId || '';
 
+    updateSynthPresetVisibility(s.midi.outputId);
+
     const inputSelect = el('input-select');
     inputSelect.innerHTML = '<option value="">— No Input —</option>';
     s.midi.inputs.forEach(({ id, name }) => {
@@ -125,10 +128,30 @@ export function initControls() {
     inputSelect.value = s.midi.inputId || '';
   }
 
+  function updateSynthPresetVisibility(outputId) {
+    const group = el('synth-preset-group');
+    if (group) group.style.display = outputId === BUILTIN_ID ? '' : 'none';
+  }
+
+  // ── Synth preset selector ──────────────────────────────
+  const presetSelect = el('synth-preset-select');
+  if (presetSelect) {
+    PRESET_NAMES.forEach(({ id, label }) => {
+      const opt = document.createElement('option');
+      opt.value = id; opt.textContent = label;
+      presetSelect.appendChild(opt);
+    });
+    presetSelect.value = getPreset();
+    presetSelect.addEventListener('change', () => setPreset(presetSelect.value));
+  }
+
   refreshPorts();
 
-  el('output-select').addEventListener('change', () =>
-    set('midi.outputId', el('output-select').value || null));
+  el('output-select').addEventListener('change', () => {
+    const val = el('output-select').value || null;
+    set('midi.outputId', val);
+    updateSynthPresetVisibility(val);
+  });
 
   el('input-select').addEventListener('change', () => {
     set('midi.inputId', el('input-select').value || null);

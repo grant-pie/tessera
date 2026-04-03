@@ -3,8 +3,8 @@ import { on, emit } from '../utils/event-bus.js';
 import { tap as tapTempo } from '../utils/tap-tempo.js';
 import * as clock from '../clock/clock.js';
 import { resetCursor } from '../engine/sequencer.js';
-import { allNotesOff, resetGlideState } from '../midi/midi-output.js';
-import { getInput } from '../midi/midi-access.js';
+import { allTracksOff, resetAllGlideStates } from '../midi/midi-output.js';
+import { getInput, getOutputById } from '../midi/midi-access.js';
 
 export function initToolbar(toolbarEl) {
   const playBtn        = toolbarEl.querySelector('#play-btn');
@@ -34,8 +34,10 @@ export function initToolbar(toolbarEl) {
   function doStop() {
     const state = get();
     clock.stop();
-    allNotesOff(state.transport.midiChannel);
-    resetGlideState();
+    allTracksOff(state.tracks, (track) => {
+      return getOutputById(track.midiOutputId || state.midi.outputId);
+    });
+    resetAllGlideStates();
     set('transport.playing', false);
     set('cursor.step', -1);
     emit('sequencer:step', { step: -1 });

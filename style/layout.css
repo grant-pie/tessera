@@ -129,7 +129,7 @@
 #step-editor {
   position: fixed;
   right: 0;
-  top: calc(var(--toolbar-height) + var(--controls-height));
+  top: calc(var(--toolbar-height) + var(--controls-height) + var(--scene-bar-height) + var(--track-strip-height));
   bottom: 0;
   width: 220px;
   background: var(--bg-1);

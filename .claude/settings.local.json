@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Read(//h//**)"
+      "Read(//h//**)",
+      "Read(//c/Users/grant/Workspaces/tessera\" 2>/dev/**)"
     ]
   }
 }

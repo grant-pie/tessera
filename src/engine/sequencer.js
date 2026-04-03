@@ -2,83 +2,91 @@ import { get, set } from '../state/state.js';
 import { isInScale } from './scale.js';
 
 /**
- * Advances the cursor to the next step based on direction, loop markers, and ping-pong.
- * Returns the new step index.
+ * Pure step-advancement function used by the multi-track scheduler.
+ * Mutates `cursor` in-place and returns { step, didWrap }.
+ * @param {{ step: number, pingPongDir: number, randomCounter: number }} cursor
+ * @param {{ direction: string, loopStart: number, loopEnd: number }} config
  */
-export function nextStep() {
-  const state = get();
-  const { direction, loopStart, loopEnd, stepCount } = state.transport;
-  const cursor = state.cursor;
-
+export function nextStepForTrack(cursor, config) {
+  const { direction, loopStart, loopEnd } = config;
   const lo = Math.min(loopStart, loopEnd);
   const hi = Math.max(loopStart, loopEnd);
 
-  let next = cursor.step;
-  let pingPongDir = cursor.pingPongDir;
+  let step          = cursor.step;
+  let pingPongDir   = cursor.pingPongDir   ?? 1;
+  let randomCounter = cursor.randomCounter ?? 0;
+  let didWrap       = false;
 
   switch (direction) {
     case 'forward':
-      next = next < lo || next > hi ? lo : next + 1;
-      if (next > hi) next = lo;
+      if (step < lo || step > hi) {
+        step = lo;
+      } else {
+        step++;
+        if (step > hi) { step = lo; didWrap = true; }
+      }
       break;
 
     case 'reverse':
-      next = next < lo || next > hi ? hi : next - 1;
-      if (next < lo) next = hi;
+      if (step < lo || step > hi) {
+        step = hi;
+      } else {
+        step--;
+        if (step < lo) { step = hi; didWrap = true; }
+      }
       break;
 
     case 'ping-pong':
-      next = cursor.step + pingPongDir;
-      if (next > hi) { next = hi - 1; pingPongDir = -1; }
-      if (next < lo) { next = lo + 1; pingPongDir = 1; }
+      step = cursor.step + pingPongDir;
+      if (step > hi) { step = hi - 1; pingPongDir = -1; }
+      if (step < lo) { step = lo + 1; pingPongDir =  1; didWrap = true; }
       break;
 
     case 'random':
-      next = lo + Math.floor(Math.random() * (hi - lo + 1));
+      step = lo + Math.floor(Math.random() * (hi - lo + 1));
+      randomCounter++;
+      if (randomCounter >= (hi - lo + 1)) { randomCounter = 0; didWrap = true; }
       break;
   }
 
-  set('cursor.step', next);
-  set('cursor.pingPongDir', pingPongDir);
+  cursor.step          = step;
+  cursor.pingPongDir   = pingPongDir;
+  cursor.randomCounter = randomCounter;
 
-  return next;
+  return { step, didWrap };
 }
 
 /**
- * Returns the MIDI notes for a given step, filtered by current scale + transpose.
- * Returns empty array for muted steps or steps with no notes.
+ * Pure note-filter function for a given track's step.
+ * @param {number}  stepIndex
+ * @param {Array}   steps      - track's steps array
+ * @param {{ scale, rootNote, transpose }} pitch
  */
-export function getActiveNotes(stepIndex) {
-  const state = get();
-  const step = state.pattern.steps[stepIndex];
-
+export function getActiveNotesForTrack(stepIndex, steps, pitch) {
+  const step = steps[stepIndex];
   if (!step || step.muted || step.notes.length === 0) return [];
-
-  const { scale, rootNote, transpose } = state.pitch;
-
-  // Probability check
   if (step.probability < 100 && Math.random() * 100 > step.probability) return [];
 
   return step.notes
-    .map(n => n + transpose)
+    .map(n => n + pitch.transpose)
     .filter(n => n >= 0 && n <= 127)
-    .filter(n => isInScale(n, rootNote, scale));
+    .filter(n => isInScale(n, pitch.rootNote, pitch.scale));
 }
 
 /**
- * Returns step duration in ms based on current BPM.
+ * Returns step duration in ms based on current BPM (global).
  */
 export function getStepDuration() {
   return 60000 / get().transport.bpm / 4;
 }
 
 /**
- * Resets the cursor to the loop start position.
+ * Resets the active track's cursor display in state.
  */
 export function resetCursor() {
-  const { loopStart, direction } = get().transport;
-  const lo = loopStart;
-  set('cursor.step', direction === 'reverse' ? get().transport.loopEnd : lo - 1);
+  const state = get();
+  const { loopStart, loopEnd, direction } = state.transport;
+  set('cursor.step', direction === 'reverse' ? loopEnd : loopStart - 1);
   set('cursor.subStep', 0);
   set('cursor.pingPongDir', 1);
 }

@@ -1,0 +1,155 @@
+/* ── Track strip ─────────────────────────────────────────────── */
+#track-strip {
+  flex: 0 0 auto;
+  height: var(--track-strip-height);
+  background: var(--bg-0);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.track-strip-label {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+  padding-right: 2px;
+}
+
+#track-cards {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ── Track card ──────────────────────────────────────────────── */
+.track-card {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 7px 0 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s, border-color 0.15s;
+  position: relative;
+}
+
+.track-card:hover {
+  background: var(--bg-3);
+  border-color: var(--border-light);
+}
+
+.track-card.active {
+  background: var(--bg-3);
+  border-color: var(--track-color, var(--accent));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--track-color, var(--accent)) 30%, transparent);
+}
+
+.track-card.muted {
+  opacity: 0.5;
+}
+
+/* Left color bar — uses CSS custom property set per-card */
+.track-color-bar {
+  width: 3px;
+  height: 100%;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  background: var(--track-color, var(--accent));
+  flex-shrink: 0;
+}
+
+.track-name {
+  font-size: 11px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 72px;
+  min-width: 40px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.track-card.active .track-name {
+  color: var(--track-color, var(--accent-bright));
+  font-weight: 600;
+}
+
+.track-rename-input {
+  width: 68px;
+  font-size: 10px;
+  padding: 1px 4px;
+  background: var(--bg-0);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+}
+
+/* ── Channel control ─────────────────────────────────────────── */
+.track-ch-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.track-ch-label {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.track-ch-input {
+  width: 28px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 2px;
+}
+
+/* ── Output selector ─────────────────────────────────────────── */
+.track-out-select {
+  font-size: 10px;
+  max-width: 96px;
+  min-width: 60px;
+  padding: 2px 4px;
+}
+
+/* ── Mute button ─────────────────────────────────────────────── */
+.track-mute-btn {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  min-width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.track-mute-btn.muted {
+  background: var(--amber-dim);
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+/* ── Add track button ────────────────────────────────────────── */
+#add-track-btn {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 4px 10px;
+  color: var(--accent-bright);
+  border-color: var(--accent-dim);
+}
+#add-track-btn:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}

@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="style/layout.css" />
   <link rel="stylesheet" href="style/grid.css" />
   <link rel="stylesheet" href="style/controls.css" />
+  <link rel="stylesheet" href="style/scenes.css" />
+  <link rel="stylesheet" href="style/tracks.css" />
   <link rel="stylesheet" href="style/sidebar.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
@@ -51,6 +53,10 @@
     <div class="ctrl-group">
       <label>OUT</label>
       <select id="output-select" class="midi-port-select"></select>
+    </div>
+    <div class="ctrl-group" id="synth-preset-group" style="display:none">
+      <label>SYNTH</label>
+      <select id="synth-preset-select" class="midi-port-select"></select>
     </div>
     <div class="ctrl-group">
       <label>IN</label>
@@ -132,6 +138,21 @@
       <input id="cc-toggle" type="checkbox" />
       <input id="cc-number-input" type="number" min="0" max="127" value="74" style="width:40px;font-family:var(--font-mono)" title="CC number" />
     </div>
+  </div>
+
+  <!-- ── Scene bar ────────────────────────────────────────────────── -->
+  <div id="scene-bar">
+    <span class="scene-bar-label">SCENES</span>
+    <div id="scene-buttons"></div>
+    <span class="scene-bar-hint" title="Shift+click a scene to queue it at the next loop boundary">Shift+click to queue</span>
+    <button id="song-mode-btn" title="Open Song Mode arranger">SONG ▾</button>
+  </div>
+
+  <!-- ── Track strip ───────────────────────────────────────────────── -->
+  <div id="track-strip">
+    <span class="track-strip-label">TRACKS</span>
+    <div id="track-cards"></div>
+    <button id="add-track-btn" title="Add a new sequencer track">+ Track</button>
   </div>
 
   <!-- ── Main ──────────────────────────────────────────────────────── -->
@@ -236,6 +257,22 @@
       <button class="substep-btn"        data-value="4">4</button>
     </div>
   </div>
+</div>
+
+<!-- ── Song mode panel ───────────────────────────────────────────── -->
+<div id="song-panel">
+  <div class="song-panel-header">
+    <h3>Song Mode</h3>
+    <div class="song-panel-header-controls">
+      <label class="song-enabled-label">
+        <input type="checkbox" id="song-enabled" />
+        Enabled
+      </label>
+      <button id="song-panel-close">✕</button>
+    </div>
+  </div>
+  <div id="song-entries"></div>
+  <button id="song-add-entry">+ Add Entry</button>
 </div>
 
 <!-- ── Overlay ────────────────────────────────────────────────────── -->

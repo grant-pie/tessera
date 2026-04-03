@@ -51,6 +51,8 @@
   /* Dimensions */
   --toolbar-height: 52px;
   --controls-height: 48px;
+  --scene-bar-height: 40px;
+  --track-strip-height: 46px;
   --piano-width: 52px;
   --step-row-height: 20px;
   --step-col-width: 24px;

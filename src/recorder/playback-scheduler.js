@@ -1,6 +1,6 @@
 import { get, set } from './recorder-state.js';
 import { emit } from '../utils/event-bus.js';
-import { getMidiAccess } from '../midi/midi-access.js';
+import { getOutputById } from '../midi/midi-access.js';
 
 const LOOKAHEAD_MS = 100;
 const INTERVAL_MS  = 25;
@@ -104,10 +104,7 @@ export function sendAllNotesOff() {
 }
 
 function getOutputPort() {
-  const state = get();
-  const access = getMidiAccess();
-  if (!access || !state.midi.outputId) return null;
-  return access.outputs.get(state.midi.outputId) || null;
+  return getOutputById(get().midi.outputId);
 }
 
 export function isPlaying() {

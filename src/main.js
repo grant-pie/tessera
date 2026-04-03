@@ -10,6 +10,9 @@ import { initStepEditor } from './ui/step-editor.js';
 import { initToolbar } from './ui/toolbar.js';
 import { initControls } from './ui/controls.js';
 import { initRandomize } from './ui/randomize.js';
+import { initSceneBar } from './ui/scene-bar.js';
+import { initTrackStrip } from './ui/track-strip.js';
+import { initScenes } from './scenes/scene-manager.js';
 import { get, setStep } from './state/state.js';
 import { save, load, applyData } from './phase2/persistence.js';
 
@@ -36,13 +39,18 @@ async function main() {
   initToolbar(document.getElementById('toolbar'));
   initControls();
   initRandomize(document.getElementById('randomize-panel'));
+  initScenes();
+  initSceneBar();
+  initTrackStrip();
 
   // 5. Initial CC lane visibility
   const state = get();
   document.getElementById('cc-lane-row').style.display = state.ccLane.visible ? 'flex' : 'none';
 
-  // 6. Disable browser context menu everywhere
-  document.addEventListener('contextmenu', e => e.preventDefault());
+  // 6. Disable browser context menu everywhere except track cards (right-click to remove)
+  document.addEventListener('contextmenu', e => {
+    if (!e.target.closest('.track-card')) e.preventDefault();
+  });
 
   // 7. Clear button
   document.getElementById('clear-btn').addEventListener('click', () => {

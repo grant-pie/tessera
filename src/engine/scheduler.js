@@ -1,16 +1,87 @@
 import { on, emit } from '../utils/event-bus.js';
-import { nextStep, getActiveNotes, getStepDuration, resetCursor } from './sequencer.js';
-import { fireStep, resetGlideState, allNotesOff, sendCC, noteOn, noteOff } from '../midi/midi-output.js';
+import { nextStepForTrack, getActiveNotesForTrack, getStepDuration, resetCursor } from './sequencer.js';
+import { fireStep, allTracksOff, sendCC, noteOn, noteOff } from '../midi/midi-output.js';
 import { get, set } from '../state/state.js';
+import { getOutputById } from '../midi/midi-access.js';
+import { switchToSceneImmediate } from '../scenes/scene-manager.js';
+
+// Per-track cursor state — not in reactive state to avoid flooding stateChange events
+// trackId -> { step, pingPongDir, randomCounter }
+const trackCursors = new Map();
 
 export function initScheduler() {
   on('clock:tick', handleTick);
   on('clock:transport', handleTransport);
 }
 
+// ── Helpers ───────────────────────────────────────────────────
+
+/**
+ * Get or create a cursor for a given track id.
+ */
+function getCursor(track) {
+  if (!trackCursors.has(track.id)) {
+    const isReverse = track.direction === 'reverse';
+    trackCursors.set(track.id, {
+      step: isReverse ? track.loopEnd : track.loopStart - 1,
+      pingPongDir: 1,
+      randomCounter: 0,
+    });
+  }
+  return trackCursors.get(track.id);
+}
+
+/**
+ * Reset all per-track cursors to their start positions.
+ */
+function resetAllCursors() {
+  trackCursors.clear();
+}
+
+/**
+ * Get the effective config for a track at the given index.
+ * The active track's live state.transport/pitch/ccLane take precedence.
+ */
+function getTrackConfig(state, trackIndex) {
+  const track = state.tracks[trackIndex];
+  if (trackIndex === state.activeTrackIndex) {
+    return {
+      id:          track.id,
+      midiChannel: state.transport.midiChannel,
+      midiOutputId: track.midiOutputId,
+      mute:        track.mute,
+      direction:   state.transport.direction,
+      stepCount:   state.transport.stepCount,
+      loopStart:   state.transport.loopStart,
+      loopEnd:     state.transport.loopEnd,
+      gateLength:  state.transport.gateLength,
+      pitch:       state.pitch,
+      ccLane:      state.ccLane,
+      steps:       state.pattern.steps,   // live editable pattern
+    };
+  }
+  return {
+    id:          track.id,
+    midiChannel: track.midiChannel,
+    midiOutputId: track.midiOutputId,
+    mute:        track.mute,
+    direction:   track.direction,
+    stepCount:   track.stepCount,
+    loopStart:   track.loopStart,
+    loopEnd:     track.loopEnd,
+    gateLength:  track.gateLength,
+    pitch:       track.pitch,
+    ccLane:      track.ccLane,
+    steps:       track.steps,
+  };
+}
+
+// ── Transport ─────────────────────────────────────────────────
+
 function handleTransport({ type }) {
   if (type === 'start' || type === 'continue') {
     set('transport.playing', true);
+    resetAllCursors();
     resetCursor();
   } else if (type === 'stop') {
     handleStop();
@@ -19,58 +90,109 @@ function handleTransport({ type }) {
 
 function handleStop() {
   const state = get();
-  allNotesOff(state.transport.midiChannel);
-  resetGlideState();
+  const globalPort = getOutputById(state.midi.outputId);
+  allTracksOff(state.tracks, (track) =>
+    track.midiOutputId ? getOutputById(track.midiOutputId) : globalPort
+  );
   set('transport.playing', false);
   set('cursor.step', -1);
   emit('sequencer:step', { step: -1 });
 }
 
+// ── Song mode / queue ─────────────────────────────────────────
+
+function handleLoopWrap() {
+  const state = get();
+  const { song } = state;
+
+  if (song.queuedSceneIndex !== null) {
+    const nextIndex = song.queuedSceneIndex;
+    set('song.queuedSceneIndex', null);
+    switchToSceneImmediate(nextIndex);
+    resetAllCursors();
+    resetCursor();
+    return;
+  }
+
+  if (song.enabled && song.entries.length > 0) {
+    const entry = song.entries[song.activeEntry];
+    if (!entry) return;
+    const nextRepeat = song.currentRepeat + 1;
+    if (nextRepeat >= entry.repeats) {
+      const nextEntry = (song.activeEntry + 1) % song.entries.length;
+      set('song.activeEntry', nextEntry);
+      set('song.currentRepeat', 0);
+      switchToSceneImmediate(song.entries[nextEntry].sceneIndex);
+      resetAllCursors();
+      resetCursor();
+    } else {
+      set('song.currentRepeat', nextRepeat);
+    }
+  }
+}
+
+// ── Tick ──────────────────────────────────────────────────────
+
 function handleTick({ tickTime }) {
   const state = get();
   if (!state.transport.playing) return;
 
-  const step = nextStep();
-  const stepData = state.pattern.steps[step];
-
-  if (!stepData) return;
-
-  const { midiChannel, gateLength } = state.transport;
   const stepDuration = getStepDuration();
-  const noteOffTime = tickTime + stepDuration * gateLength;
+  const hasSolo = state.tracks.some(t => t.solo);
 
-  if (stepData.substeps > 1 && !stepData.glide) {
-    fireSubsteps(step, stepData, midiChannel, tickTime, stepDuration, gateLength);
-  } else {
-    const notes = getActiveNotes(step);
-    if (!stepData.muted) {
-      fireStep(midiChannel, notes, stepData.velocity, stepData.glide, tickTime, noteOffTime);
+  state.tracks.forEach((track, trackIndex) => {
+    const cfg = getTrackConfig(state, trackIndex);
+
+    if (cfg.mute) return;
+    if (hasSolo && !track.solo) return;
+
+    const cursor = getCursor({ id: cfg.id, direction: cfg.direction, loopStart: cfg.loopStart, loopEnd: cfg.loopEnd });
+    const { step, didWrap } = nextStepForTrack(cursor, cfg);
+
+    const stepData = cfg.steps[step];
+    if (!stepData) return;
+
+    const noteOffTime = tickTime + stepDuration * cfg.gateLength;
+    const port = cfg.midiOutputId
+      ? getOutputById(cfg.midiOutputId)
+      : getOutputById(state.midi.outputId);
+
+    if (stepData.substeps > 1 && !stepData.glide) {
+      fireSubstepsForTrack(cfg, stepData, stepDuration, tickTime, port);
+    } else {
+      const notes = getActiveNotesForTrack(step, cfg.steps, cfg.pitch);
+      if (!stepData.muted) {
+        fireStep(cfg.midiChannel, notes, stepData.velocity, stepData.glide,
+                 tickTime, noteOffTime, port, cfg.id);
+      }
     }
-  }
 
-  if (state.ccLane.visible && stepData.cc !== null) {
-    sendCC(midiChannel, state.ccLane.ccNumber, stepData.cc, tickTime);
-  }
+    if (cfg.ccLane.visible && stepData.cc !== null) {
+      sendCC(cfg.midiChannel, cfg.ccLane.ccNumber, stepData.cc, tickTime, port);
+    }
 
-  emit('sequencer:step', { step, tickTime });
+    // Active track drives the grid playhead and song mode
+    if (trackIndex === state.activeTrackIndex) {
+      set('cursor.step', step);
+      emit('sequencer:step', { step, tickTime });
+      if (didWrap) handleLoopWrap();
+    }
+  });
 }
 
-function fireSubsteps(stepIndex, stepData, channel, tickTime, stepDuration, gateLength) {
+function fireSubstepsForTrack(cfg, stepData, stepDuration, tickTime, port) {
   const count = stepData.substeps;
   const subDuration = stepDuration / count;
-  const state = get();
-  const { transpose } = state.pitch;
-
   const notes = stepData.notes
-    .map(n => n + transpose)
+    .map(n => n + cfg.pitch.transpose)
     .filter(n => n >= 0 && n <= 127);
 
   if (notes.length === 0 || stepData.muted) return;
 
   for (let i = 0; i < count; i++) {
-    const subTickTime = tickTime + i * subDuration;
-    const subNoteOffTime = subTickTime + subDuration * gateLength;
-    notes.forEach(n => noteOn(channel, n, stepData.velocity, subTickTime));
-    notes.forEach(n => noteOff(channel, n, subNoteOffTime));
+    const subTickTime    = tickTime + i * subDuration;
+    const subNoteOffTime = subTickTime + subDuration * cfg.gateLength;
+    notes.forEach(n => noteOn(cfg.midiChannel,  n, stepData.velocity, subTickTime,    port));
+    notes.forEach(n => noteOff(cfg.midiChannel, n, subNoteOffTime, port));
   }
 }
