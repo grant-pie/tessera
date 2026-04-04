@@ -3,6 +3,8 @@ import { on } from '../utils/event-bus.js';
 import { isBlackKey, midiNoteToName } from '../utils/math.js';
 import { noteOn, noteOff } from '../midi/midi-output.js';
 import { isInScale } from '../engine/scale.js';
+import { getOutputById } from '../midi/midi-access.js';
+import { BUILTIN_ID, getFactoryPortForPreset } from '../audio/factory-sound-engine.js';
 
 const KEY_HEIGHT = 20;
 const WIDTH = 52;
@@ -95,6 +97,15 @@ function render() {
 
 let pressedNote = null;
 
+function resolveActivePort(state) {
+  const track    = state.tracks[state.activeTrackIndex];
+  const outputId = track?.midiOutputId || state.midi.outputId;
+  if (track?.synthPreset && outputId === BUILTIN_ID) {
+    return getFactoryPortForPreset(track.synthPreset);
+  }
+  return getOutputById(outputId);
+}
+
 function onMouseDown(e) {
   const state = get();
   const rect = canvas.getBoundingClientRect();
@@ -104,7 +115,8 @@ function onMouseDown(e) {
   if (midiNote < 0 || midiNote > 127) return;
 
   pressedNote = midiNote;
-  noteOn(state.transport.midiChannel, midiNote, 100, performance.now());
+  const port = resolveActivePort(state);
+  noteOn(state.transport.midiChannel, midiNote, 100, performance.now(), port);
 
   const active = new Set(state.ui.activeNotes);
   active.add(midiNote);
@@ -114,7 +126,8 @@ function onMouseDown(e) {
 function onMouseUp() {
   if (pressedNote === null) return;
   const state = get();
-  noteOff(state.transport.midiChannel, pressedNote, performance.now());
+  const port = resolveActivePort(state);
+  noteOff(state.transport.midiChannel, pressedNote, performance.now(), port);
   const active = new Set(state.ui.activeNotes);
   active.delete(pressedNote);
   set('ui.activeNotes', active);
