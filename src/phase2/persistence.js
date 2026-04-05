@@ -1,72 +1,127 @@
 import { get, set, setStep } from '../state/state.js';
-import { defaultStep, defaultTrack } from '../state/defaults.js';
+import { defaultStep, defaultTrack, defaultScene } from '../state/defaults.js';
 import { loadTrackIntoState } from '../scenes/track-manager.js';
+import { switchToSceneImmediate } from '../scenes/scene-manager.js';
+import * as clock from '../clock/clock.js';
 
-const FILE_VERSION = 1;
+const FILE_VERSION = 3;
+
+// ── Helpers ───────────────────────────────────────────────────
+
+function serializeStep(s) {
+  return {
+    notes:       s.notes,
+    velocity:    s.velocity,
+    probability: s.probability,
+    muted:       s.muted,
+    glide:       s.glide,
+    substeps:    s.substeps,
+    cc:          s.cc,
+  };
+}
+
+function serializeTrack(track) {
+  return {
+    name:         track.name,
+    color:        track.color,
+    midiOutputId: track.midiOutputId,
+    synthPreset:  track.synthPreset,
+    midiChannel:  track.midiChannel,
+    mute:         track.mute,
+    direction:    track.direction,
+    stepCount:    track.stepCount,
+    loopStart:    track.loopStart,
+    loopEnd:      track.loopEnd,
+    gateLength:   track.gateLength,
+    pitch:        { ...track.pitch },
+    ccLane:       { ...track.ccLane },
+    steps:        track.steps.map(serializeStep),
+  };
+}
+
+/** Snapshot the active track's live state into state.tracks before saving. */
+function flushActiveTrack() {
+  const state = get();
+  const i = state.activeTrackIndex;
+  const track = state.tracks[i];
+  const flushed = {
+    ...track,
+    steps:       state.pattern.steps.map(s => ({ ...s, notes: [...s.notes] })),
+    direction:   state.transport.direction,
+    stepCount:   state.transport.stepCount,
+    loopStart:   state.transport.loopStart,
+    loopEnd:     state.transport.loopEnd,
+    gateLength:  state.transport.gateLength,
+    midiChannel: state.transport.midiChannel,
+    pitch:       { ...state.pitch },
+    ccLane:      { ...state.ccLane },
+  };
+  const tracks = state.tracks.map((t, idx) => idx === i ? flushed : t);
+  set('tracks', tracks);
+}
+
+// ── Save ──────────────────────────────────────────────────────
 
 export function save() {
+  // Flush live edits into the active track and active scene before snapshotting
+  flushActiveTrack();
+
   const state = get();
 
+  // Also flush current tracks into the active scene
+  const scenes = state.scenes.map((scene, si) => {
+    if (si !== state.activeSceneIndex) return scene;
+    return {
+      ...scene,
+      tracks: state.tracks.map(serializeTrack),
+      swing:  state.transport.swing,
+    };
+  });
+
   const data = {
-    version: FILE_VERSION,
-    transport: {
-      bpm:        state.transport.bpm,
-      swing:      state.transport.swing,
-      gateLength: state.transport.gateLength,
-      direction:  state.transport.direction,
-      stepCount:  state.transport.stepCount,
-      loopStart:  state.transport.loopStart,
-      loopEnd:    state.transport.loopEnd,
-      midiChannel: state.transport.midiChannel,
-    },
-    pitch: {
-      scale:     state.pitch.scale,
-      rootNote:  state.pitch.rootNote,
-      transpose: state.pitch.transpose,
-    },
-    ccLane: {
-      visible:  state.ccLane.visible,
-      ccNumber: state.ccLane.ccNumber,
-    },
-    pattern: {
-      name:  state.pattern.name,
-      steps: state.pattern.steps.map(step => ({
-        notes:       step.notes,
-        velocity:    step.velocity,
-        probability: step.probability,
-        muted:       step.muted,
-        glide:       step.glide,
-        substeps:    step.substeps,
-        cc:          step.cc,
-      })),
-    },
+    version:          FILE_VERSION,
+    transport:        { bpm: state.transport.bpm, swing: state.transport.swing },
+    activeSceneIndex: state.activeSceneIndex,
+    song:             { ...state.song },
+    scenes:           scenes.map((scene, si) => ({
+      name:   scene.name,
+      swing:  scene.swing ?? 0,
+      tracks: (scene.tracks || []).map(serializeTrack),
+    })),
   };
 
+  const name = state.scenes[state.activeSceneIndex]?.name ?? 'tessera';
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
-
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${state.pattern.name.replace(/\s+/g, '_')}.tessera.json`;
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `${name.replace(/\s+/g, '_')}.tessera.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
+// ── Load ──────────────────────────────────────────────────────
+
 export function load() {
   const input = document.createElement('input');
-  input.type = 'file';
+  input.type   = 'file';
   input.accept = '.json,.tessera.json';
 
   input.addEventListener('change', () => {
     const file = input.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const data = JSON.parse(e.target.result);
-        applyData(data);
+        if (data.scenes) {
+          applyFullData(data);
+        } else if (data.tracks) {
+          applyMultiTrackData(data);
+        } else {
+          applyData(data);
+        }
       } catch (err) {
         alert('Failed to load file: ' + err.message);
       }
@@ -77,114 +132,111 @@ export function load() {
   input.click();
 }
 
-export function applyData(data) {
-  if (!data.pattern?.steps) {
-    alert('Invalid Tessera file.');
-    return;
+// ── Apply v3 (full scenes + tracks) ──────────────────────────
+
+export function applyFullData(data) {
+  if (!data.scenes?.length) { alert('Invalid Tessera file.'); return; }
+
+  // Global BPM
+  if (data.transport?.bpm != null) {
+    set('transport.bpm', data.transport.bpm);
+    clock.setBpm(data.transport.bpm);
   }
 
-  // Transport
+  // Rebuild scenes
+  const loadedScenes = data.scenes.map((sd, si) => {
+    const base = defaultScene(si);
+    const tracks = (sd.tracks || []).map((td, ti) => buildTrack(td, ti));
+    return {
+      ...base,
+      name:   sd.name ?? base.name,
+      swing:  sd.swing ?? 0,
+      tracks,
+    };
+  });
+
+  set('scenes', loadedScenes);
+
+  // Restore song mode
+  if (data.song) {
+    set('song.enabled',      data.song.enabled      ?? false);
+    set('song.entries',      data.song.entries       ?? []);
+    set('song.activeEntry',  data.song.activeEntry   ?? 0);
+    set('song.currentRepeat',data.song.currentRepeat ?? 0);
+    set('song.queuedSceneIndex', null);
+  }
+
+  // Switch to saved active scene (loads its tracks into live state)
+  const sceneIndex = Math.min(data.activeSceneIndex ?? 0, loadedScenes.length - 1);
+  switchToSceneImmediate(sceneIndex);
+
+  syncControlsUI();
+}
+
+// ── Apply v1 legacy (single pattern) ─────────────────────────
+
+export function applyData(data) {
+  if (!data.pattern?.steps) { alert('Invalid Tessera file.'); return; }
+
   if (data.transport) {
     const t = data.transport;
-    if (t.bpm        != null) set('transport.bpm',         t.bpm);
-    if (t.swing      != null) set('transport.swing',       t.swing);
-    if (t.gateLength != null) set('transport.gateLength',  t.gateLength);
-    if (t.direction  != null) set('transport.direction',   t.direction);
-    if (t.stepCount  != null) set('transport.stepCount',   t.stepCount);
-    if (t.loopStart  != null) set('transport.loopStart',   t.loopStart);
-    if (t.loopEnd    != null) set('transport.loopEnd',     t.loopEnd);
+    if (t.bpm        != null) { set('transport.bpm', t.bpm); clock.setBpm(t.bpm); }
+    if (t.swing      != null) set('transport.swing',      t.swing);
+    if (t.gateLength != null) set('transport.gateLength', t.gateLength);
+    if (t.direction  != null) set('transport.direction',  t.direction);
+    if (t.stepCount  != null) { set('transport.stepCount', t.stepCount); clock.setStepCount(t.stepCount); }
+    if (t.loopStart  != null) set('transport.loopStart',  t.loopStart);
+    if (t.loopEnd    != null) set('transport.loopEnd',    t.loopEnd);
     if (t.midiChannel != null) set('transport.midiChannel', t.midiChannel);
   }
-
-  // Pitch
   if (data.pitch) {
     const p = data.pitch;
     if (p.scale     != null) set('pitch.scale',     p.scale);
     if (p.rootNote  != null) set('pitch.rootNote',  p.rootNote);
     if (p.transpose != null) set('pitch.transpose', p.transpose);
   }
-
-  // CC lane
   if (data.ccLane) {
     if (data.ccLane.visible  != null) set('ccLane.visible',  data.ccLane.visible);
     if (data.ccLane.ccNumber != null) set('ccLane.ccNumber', data.ccLane.ccNumber);
   }
-
-  // Pattern name
   if (data.pattern.name) set('pattern.name', data.pattern.name);
 
-  // Steps — merge with defaults so missing fields don't break anything
   const steps = data.pattern.steps;
   for (let i = 0; i < 64; i++) {
-    const loaded = steps[i];
-    if (loaded) {
-      setStep(i, { ...defaultStep(), ...loaded });
-    } else {
-      setStep(i, defaultStep());
-    }
+    setStep(i, { ...defaultStep(), ...(steps[i] || {}) });
   }
 
-  // Sync controls UI to loaded state
   syncControlsUI();
 }
 
-/**
- * Apply a multi-track pending payload (from drum generator or other multi-track generators).
- * Format: { version: 2, transport: { bpm, stepCount }, tracks: [ trackData, ... ] }
- */
+// ── Apply v2 multi-track (from generators) ────────────────────
+
 export function applyMultiTrackData(data) {
   if (!data.tracks?.length) return;
 
-  // Apply global transport fields
   if (data.transport) {
     const t = data.transport;
-    if (t.bpm      != null) set('transport.bpm',      t.bpm);
+    if (t.bpm      != null) { set('transport.bpm', t.bpm); clock.setBpm(t.bpm); }
     if (t.stepCount != null) {
       set('transport.stepCount', t.stepCount);
       set('transport.loopEnd',   t.stepCount - 1);
+      clock.setStepCount(t.stepCount);
     }
   }
 
-  // Build track objects
-  const tracks = data.tracks.map((td, i) => {
-    const base = defaultTrack(i);
-    return {
-      ...base,
-      name:        td.name        ?? base.name,
-      color:       td.color       ?? base.color,
-      synthPreset: td.synthPreset ?? null,
-      midiOutputId: td.midiOutputId ?? null,
-      midiChannel: td.midiChannel ?? base.midiChannel,
-      direction:   td.direction   ?? 'forward',
-      stepCount:   td.stepCount   ?? (data.transport?.stepCount ?? 16),
-      loopStart:   0,
-      loopEnd:     (td.stepCount ?? data.transport?.stepCount ?? 16) - 1,
-      gateLength:  td.gateLength  ?? 0.5,
-      pitch:       td.pitch       ?? base.pitch,
-      ccLane:      td.ccLane      ?? base.ccLane,
-      steps: (() => {
-        const s = Array.from({ length: 64 }, defaultStep);
-        (td.steps || []).forEach((step, idx) => { if (idx < 64) s[idx] = { ...defaultStep(), ...step }; });
-        return s;
-      })(),
-    };
-  });
+  const tracks = data.tracks.map((td, i) => buildTrack(td, i));
 
   set('tracks', tracks);
   set('activeTrackIndex', 0);
   loadTrackIntoState(0);
 
-  // Populate multiple scenes with the same drum tracks
   const sceneCount = Math.max(1, Math.min(8, data.sceneCount ?? 1));
   if (sceneCount > 1) {
     const scenes = get().scenes.slice();
     for (let i = 0; i < sceneCount; i++) {
       scenes[i] = {
         ...(scenes[i] || {}),
-        tracks: tracks.map(t => ({
-          ...t,
-          steps: t.steps.map(s => ({ ...s, notes: [...s.notes] })),
-        })),
+        tracks: tracks.map(t => ({ ...t, steps: t.steps.map(s => ({ ...s, notes: [...s.notes] })) })),
         swing: get().transport.swing,
       };
     }
@@ -192,34 +244,58 @@ export function applyMultiTrackData(data) {
     set('activeSceneIndex', 0);
   }
 
-  const el = id => document.getElementById(id);
-  const bpmDisplay = el('bpm-display');
-  if (bpmDisplay && data.transport?.bpm) bpmDisplay.textContent = data.transport.bpm;
-  if (el('step-count-input') && data.transport?.stepCount) el('step-count-input').value = data.transport.stepCount;
-  if (el('loop-end-input')   && data.transport?.stepCount) el('loop-end-input').value   = data.transport.stepCount;
+  syncControlsUI();
 }
+
+// ── Shared track builder ──────────────────────────────────────
+
+function buildTrack(td, i) {
+  const base = defaultTrack(i);
+  return {
+    ...base,
+    name:         td.name         ?? base.name,
+    color:        td.color        ?? base.color,
+    midiOutputId: td.midiOutputId ?? null,
+    synthPreset:  td.synthPreset  ?? null,
+    midiChannel:  td.midiChannel  ?? base.midiChannel,
+    mute:         td.mute         ?? false,
+    direction:    td.direction    ?? 'forward',
+    stepCount:    td.stepCount    ?? 64,
+    loopStart:    td.loopStart    ?? 0,
+    loopEnd:      td.loopEnd      ?? (td.stepCount ?? 64) - 1,
+    gateLength:   td.gateLength   ?? 0.5,
+    pitch:        td.pitch        ? { ...td.pitch }  : { ...base.pitch },
+    ccLane:       td.ccLane       ? { ...td.ccLane } : { ...base.ccLane },
+    steps: (() => {
+      const s = Array.from({ length: 64 }, defaultStep);
+      (td.steps || []).forEach((step, idx) => {
+        if (idx < 64) s[idx] = { ...defaultStep(), ...step };
+      });
+      return s;
+    })(),
+  };
+}
+
+// ── Sync UI controls after load ───────────────────────────────
 
 function syncControlsUI() {
   const state = get();
   const t = state.transport;
   const p = state.pitch;
-
   const el = id => document.getElementById(id);
 
-  const bpmDisplay = el('bpm-display');
-  if (bpmDisplay) bpmDisplay.textContent = t.bpm;
-
-  if (el('swing-slider'))       { el('swing-slider').value = t.swing; el('swing-val').textContent = t.swing + '%'; }
-  if (el('gate-slider'))        { el('gate-slider').value = Math.round(t.gateLength * 100); el('gate-val').textContent = Math.round(t.gateLength * 100) + '%'; }
-  if (el('step-count-input'))   el('step-count-input').value = t.stepCount;
-  if (el('loop-start-input'))   el('loop-start-input').value = t.loopStart + 1;
-  if (el('loop-end-input'))     el('loop-end-input').value   = t.loopEnd + 1;
-  if (el('channel-input'))      el('channel-input').value    = t.midiChannel;
-  if (el('scale-select'))       el('scale-select').value     = p.scale;
-  if (el('root-select'))        el('root-select').value      = p.rootNote;
-  if (el('transpose-input'))    el('transpose-input').value  = p.transpose;
-  if (el('cc-toggle'))          el('cc-toggle').checked      = state.ccLane.visible;
-  if (el('cc-number-input'))    el('cc-number-input').value  = state.ccLane.ccNumber;
+  if (el('bpm-display'))    el('bpm-display').textContent = t.bpm;
+  if (el('swing-slider'))   { el('swing-slider').value = t.swing; el('swing-val').textContent = t.swing + '%'; }
+  if (el('gate-slider'))    { const g = Math.round(t.gateLength * 100); el('gate-slider').value = g; el('gate-val').textContent = g + '%'; }
+  if (el('step-count-input'))  el('step-count-input').value  = t.stepCount;
+  if (el('loop-start-input'))  el('loop-start-input').value  = t.loopStart + 1;
+  if (el('loop-end-input'))    el('loop-end-input').value    = t.loopEnd + 1;
+  if (el('channel-input'))     el('channel-input').value     = t.midiChannel;
+  if (el('scale-select'))      el('scale-select').value      = p.scale;
+  if (el('root-select'))       el('root-select').value       = p.rootNote;
+  if (el('transpose-input'))   el('transpose-input').value   = p.transpose;
+  if (el('cc-toggle'))         el('cc-toggle').checked       = state.ccLane.visible;
+  if (el('cc-number-input'))   el('cc-number-input').value   = state.ccLane.ccNumber;
 
   document.querySelectorAll('.dir-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.dir === t.direction);
