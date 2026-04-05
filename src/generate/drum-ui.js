@@ -284,7 +284,9 @@ function init() {
   sendBtn.addEventListener('click', () => {
     const bpm        = Math.max(20, Math.min(300, +bpmInput.value || 120));
     const sceneCount = Math.max(1, Math.min(8,  +scenesInput.value || 1));
-    localStorage.setItem('tessera_pending', JSON.stringify(buildPayload(bpm, sceneCount)));
+    const data       = buildPayload(bpm, sceneCount);
+    data.targetScene = Math.max(1, parseInt(document.getElementById('drum-send-scene')?.value, 10) || 1) - 1;
+    localStorage.setItem('tessera_pending', JSON.stringify(data));
     window.location.href = 'index.html';
   });
 

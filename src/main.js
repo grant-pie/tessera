@@ -14,7 +14,7 @@ import { initSceneBar } from './ui/scene-bar.js';
 import { initTrackStrip } from './ui/track-strip.js';
 import { initScenes } from './scenes/scene-manager.js';
 import { get, setStep } from './state/state.js';
-import { save, load, applyData, applyMultiTrackData } from './phase2/persistence.js';
+import { save, load, applyData, applyMultiTrackData, applyPatternToTarget, applyMultiTrackToTarget, autosave, restoreAutosave } from './phase2/persistence.js';
 
 async function main() {
   // 1. MIDI
@@ -64,19 +64,36 @@ async function main() {
   document.getElementById('save-btn').addEventListener('click', save);
   document.getElementById('load-btn').addEventListener('click', load);
 
-  // 9. Load pattern sent from Generate page
+  // 9. Always restore session state first (preserves scenes/tracks across page navigations).
+  //    sessionStorage is tab-scoped so a fresh tab always starts clean.
+  restoreAutosave();
+
+  // 10. Load pattern sent from Generate / Recorder page (applied on top of restored state).
   const pending = localStorage.getItem('tessera_pending');
   if (pending) {
     localStorage.removeItem('tessera_pending');
     try {
       const data = JSON.parse(pending);
+      const hasTarget = data.targetScene != null;
+
       if (data.tracks) {
-        applyMultiTrackData(data);
+        hasTarget
+          ? applyMultiTrackToTarget(data, data.targetScene)
+          : applyMultiTrackData(data);
       } else {
-        applyData(data);
+        hasTarget
+          ? applyPatternToTarget(data, data.targetScene, data.targetTrack ?? 0)
+          : applyData(data);
       }
     } catch (e) { console.error('Failed to load pending pattern', e); }
   }
+
+  // 11. Auto-save on every navigation away from this page.
+  //     Both pagehide and nav link clicks are covered for maximum reliability.
+  window.addEventListener('pagehide', autosave);
+  document.querySelectorAll('#page-nav a').forEach(a => {
+    a.addEventListener('click', autosave, { capture: true });
+  });
 
   // 10. Keyboard shortcuts
   document.addEventListener('keydown', (e) => {

@@ -5,6 +5,45 @@ import { switchToSceneImmediate } from '../scenes/scene-manager.js';
 import * as clock from '../clock/clock.js';
 
 const FILE_VERSION = 3;
+// sessionStorage key — tab-scoped, survives page navigation within the tab
+// but clears when the tab is closed (unlike localStorage).
+const AUTOSAVE_KEY = 'tessera_autosave';
+
+// ── Auto-save / restore (preserves state across page navigations) ─
+
+export function autosave() {
+  flushActiveTrack();
+  const state = get();
+  const scenes = state.scenes.map((scene, si) => {
+    if (si !== state.activeSceneIndex) return scene;
+    return { ...scene, tracks: state.tracks.map(serializeTrack), swing: state.transport.swing };
+  });
+  const data = {
+    version:          FILE_VERSION,
+    transport:        { bpm: state.transport.bpm, swing: state.transport.swing },
+    activeSceneIndex: state.activeSceneIndex,
+    song:             { ...state.song },
+    scenes:           scenes.map(scene => ({
+      name:   scene.name,
+      swing:  scene.swing ?? 0,
+      tracks: (scene.tracks || []).map(serializeTrack),
+    })),
+  };
+  try { sessionStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data)); } catch (_) {}
+}
+
+export function restoreAutosave() {
+  const raw = sessionStorage.getItem(AUTOSAVE_KEY);
+  if (!raw) return false;
+  try {
+    const data = JSON.parse(raw);
+    if (!data.scenes?.length) return false;
+    applyFullData(data);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -242,6 +281,98 @@ export function applyMultiTrackData(data) {
     }
     set('scenes', scenes);
     set('activeSceneIndex', 0);
+  }
+
+  syncControlsUI();
+}
+
+// ── Apply pending to a specific scene + track slot ───────────
+
+/**
+ * Merge a single-pattern payload (v1) into a specific scene and track
+ * without touching any other scenes or tracks.
+ */
+export function applyPatternToTarget(data, sceneIndex, trackIndex) {
+  const state   = get();
+  const scenes  = state.scenes.slice();
+
+  // Ensure the target scene exists
+  while (scenes.length <= sceneIndex) {
+    scenes.push(defaultScene(scenes.length));
+  }
+
+  const scene  = { ...scenes[sceneIndex] };
+  const tracks = scene.tracks ? scene.tracks.map(t => ({ ...t })) : state.tracks.map(t => ({ ...t }));
+
+  // Ensure the target track exists
+  while (tracks.length <= trackIndex) {
+    tracks.push(defaultTrack(tracks.length));
+  }
+
+  const base    = tracks[trackIndex];
+  const t       = data.transport || {};
+  const steps   = Array.from({ length: 64 }, defaultStep);
+  (data.pattern?.steps || []).forEach((s, i) => { if (i < 64) steps[i] = { ...defaultStep(), ...s }; });
+
+  tracks[trackIndex] = {
+    ...base,
+    direction:   t.direction   ?? base.direction,
+    stepCount:   t.stepCount   ?? base.stepCount,
+    loopStart:   t.loopStart   ?? base.loopStart,
+    loopEnd:     t.loopEnd     ?? base.loopEnd,
+    gateLength:  t.gateLength  ?? base.gateLength,
+    midiChannel: t.midiChannel ?? base.midiChannel,
+    pitch:       data.pitch    ? { ...data.pitch }   : { ...base.pitch },
+    ccLane:      data.ccLane   ? { ...data.ccLane }  : { ...base.ccLane },
+    steps,
+  };
+
+  scenes[sceneIndex] = { ...scene, tracks };
+  set('scenes', scenes);
+
+  // If the target scene is active, also load the track into live state
+  if (sceneIndex === state.activeSceneIndex) {
+    set('tracks', tracks);
+    if (trackIndex === state.activeTrackIndex) {
+      loadTrackIntoState(trackIndex);
+    }
+  }
+
+  syncControlsUI();
+}
+
+/**
+ * Merge a multi-track payload (v2, drums) into scenes starting at targetScene.
+ */
+export function applyMultiTrackToTarget(data, startSceneIndex) {
+  const state  = get();
+  const scenes = state.scenes.slice();
+
+  const builtTracks = data.tracks.map((td, i) => buildTrack(td, i));
+  const sceneCount  = Math.max(1, Math.min(8, data.sceneCount ?? 1));
+
+  for (let si = 0; si < sceneCount; si++) {
+    const idx = startSceneIndex + si;
+    while (scenes.length <= idx) scenes.push(defaultScene(scenes.length));
+    scenes[idx] = {
+      ...scenes[idx],
+      tracks: builtTracks.map(t => ({ ...t, steps: t.steps.map(s => ({ ...s, notes: [...s.notes] })) })),
+      swing: scenes[idx].swing ?? 0,
+    };
+  }
+
+  set('scenes', scenes);
+
+  // Load into live state if the target scene is active
+  if (startSceneIndex === state.activeSceneIndex) {
+    set('tracks', scenes[startSceneIndex].tracks);
+    set('activeTrackIndex', 0);
+    loadTrackIntoState(0);
+  }
+
+  if (data.transport?.bpm != null) {
+    set('transport.bpm', data.transport.bpm);
+    clock.setBpm(data.transport.bpm);
   }
 
   syncControlsUI();

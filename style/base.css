@@ -124,3 +124,30 @@ label {
 ::-webkit-scrollbar-track { background: var(--bg-1); }
 ::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+/* ── Send-to-sequencer target group (shared across pages) ────── */
+.send-target-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.send-target-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.send-target-input {
+  width: 36px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  padding: 2px 2px;
+  color: var(--accent-bright);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}

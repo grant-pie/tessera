@@ -329,7 +329,10 @@ function init() {
   // Send to Sequencer
   document.getElementById('mk-send-btn').addEventListener('click', () => {
     if (sequence.length === 0) generate();
-    localStorage.setItem('tessera_pending', JSON.stringify(buildPreset()));
+    const data = buildPreset();
+    data.targetScene = Math.max(1, parseInt(document.getElementById('mk-send-scene')?.value, 10) || 1) - 1;
+    data.targetTrack = Math.max(1, parseInt(document.getElementById('mk-send-track')?.value, 10) || 1) - 1;
+    localStorage.setItem('tessera_pending', JSON.stringify(data));
     window.location.href = 'index.html';
   });
 

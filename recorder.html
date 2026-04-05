@@ -81,7 +81,13 @@
     </div>
     <button id="rec-quantize-btn">⧖ Quantize</button>
     <button id="rec-trim-btn">✂ Apply Trim</button>
-    <button id="rec-send-btn" style="color:var(--green)" title="Quantize and send to the Sequencer">→ Sequencer</button>
+    <div class="send-target-group">
+      <button id="rec-send-btn" style="color:var(--green)" title="Send to the Sequencer">→ Sequencer</button>
+      <label class="send-target-label">Scene</label>
+      <input id="rec-send-scene" class="send-target-input" type="number" min="1" max="32" value="1" title="Target scene number" />
+      <label class="send-target-label">Track</label>
+      <input id="rec-send-track" class="send-target-input" type="number" min="1" max="16" value="1" title="Target track number" />
+    </div>
 
     <div class="separator"></div>
 

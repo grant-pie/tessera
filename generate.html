@@ -90,7 +90,13 @@
           </div>
 
           <div class="gen-section gen-actions-section">
-            <button id="gen-send-btn" class="gen-send-btn">→ Send to Sequencer</button>
+            <div class="send-target-group">
+              <button id="gen-send-btn" class="gen-send-btn">→ Send to Sequencer</button>
+              <label class="send-target-label">Sc</label>
+              <input id="gen-send-scene" class="send-target-input" type="number" min="1" max="32" value="1" title="Target scene" />
+              <label class="send-target-label">Tr</label>
+              <input id="gen-send-track" class="send-target-input" type="number" min="1" max="16" value="1" title="Target track" />
+            </div>
             <button id="gen-download-btn" class="gen-dl-btn">↓ Download Preset</button>
           </div>
 
@@ -165,7 +171,13 @@
           <!-- Actions -->
           <div class="gen-section gen-actions-section">
             <button id="mk-generate-btn" class="gen-generate-btn">⚄ Generate</button>
-            <button id="mk-send-btn" class="gen-send-btn">→ Send to Sequencer</button>
+            <div class="send-target-group">
+              <button id="mk-send-btn" class="gen-send-btn">→ Send to Sequencer</button>
+              <label class="send-target-label">Sc</label>
+              <input id="mk-send-scene" class="send-target-input" type="number" min="1" max="32" value="1" title="Target scene" />
+              <label class="send-target-label">Tr</label>
+              <input id="mk-send-track" class="send-target-input" type="number" min="1" max="16" value="1" title="Target track" />
+            </div>
             <button id="mk-download-btn" class="gen-dl-btn">↓ Download Preset</button>
           </div>
 
@@ -200,7 +212,11 @@
           </div>
           <div class="drum-global-actions">
             <button id="drum-randomize-btn" class="gen-generate-btn">⚄ Randomize</button>
-            <button id="drum-send-btn" class="gen-send-btn">→ Send to Sequencer</button>
+            <div class="send-target-group">
+              <button id="drum-send-btn" class="gen-send-btn">→ Send to Sequencer</button>
+              <label class="send-target-label">Scene</label>
+              <input id="drum-send-scene" class="send-target-input" type="number" min="1" max="32" value="1" title="Starting scene" />
+            </div>
           </div>
         </div>
 

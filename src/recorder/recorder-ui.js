@@ -99,6 +99,9 @@ export function initRecorderUI() {
     const subdivision = parseInt(gridSelect.value, 10);
     const data        = convertToPattern(state.recording.events, bpm, subdivision, state.recording.durationMs);
 
+    data.targetScene = Math.max(1, parseInt(el('rec-send-scene')?.value, 10) || 1) - 1;
+    data.targetTrack = Math.max(1, parseInt(el('rec-send-track')?.value, 10) || 1) - 1;
+
     localStorage.setItem('tessera_pending', JSON.stringify(data));
     window.location.href = 'index.html';
   });
