@@ -175,15 +175,24 @@ function midiToHz(note) {
 
 // ── Drum synthesis ────────────────────────────────────────────
 
-function _triggerKick(velocity, at) {
+// Root MIDI notes for each drum — the "natural" pitch of each sound.
+// Notes above/below shift the synthesis frequencies proportionally.
+const DRUM_ROOT = { kick: 36, snare: 38, 'hihat-closed': 42, 'hihat-open': 46 };
+
+function _drumPitchRatio(note, rootNote) {
+  return Math.pow(2, (note - rootNote) / 12);
+}
+
+function _triggerKick(note, velocity, at) {
   const ctx = getAudioCtx();
   const vol = velocity / 127;
+  const r   = _drumPitchRatio(note, DRUM_ROOT.kick);
 
-  // Body — sine with rapid pitch sweep (the "thud")
+  // Body — sine with rapid pitch sweep scaled by pitch ratio
   const body = ctx.createOscillator();
   body.type = 'sine';
-  body.frequency.setValueAtTime(160, at);
-  body.frequency.exponentialRampToValueAtTime(48, at + 0.055);
+  body.frequency.setValueAtTime(160 * r, at);
+  body.frequency.exponentialRampToValueAtTime(48 * r, at + 0.055);
 
   const bodyGain = ctx.createGain();
   bodyGain.gain.setValueAtTime(vol * 0.9, at);
@@ -194,7 +203,7 @@ function _triggerKick(velocity, at) {
   body.start(at);
   body.stop(at + 0.45);
 
-  // Click — short filtered noise burst for the attack transient
+  // Click — short filtered noise burst; scale bandpass centre with pitch
   const clickLen = Math.floor(ctx.sampleRate * 0.006);
   const clickBuf = ctx.createBuffer(1, clickLen, ctx.sampleRate);
   const cd = clickBuf.getChannelData(0);
@@ -205,7 +214,7 @@ function _triggerKick(velocity, at) {
 
   const clickFilter = ctx.createBiquadFilter();
   clickFilter.type = 'bandpass';
-  clickFilter.frequency.value = 3200;
+  clickFilter.frequency.value = Math.min(3200 * r, ctx.sampleRate / 2 - 1);
   clickFilter.Q.value = 0.8;
 
   const clickGain = ctx.createGain();
@@ -221,21 +230,20 @@ function _triggerKick(velocity, at) {
 
 /**
  * Shared metallic noise source for hi-hats.
- * Returns a GainNode summing six detuned square oscillators — the classic TR-style approach.
- * `durationS` controls how long the oscillators run before auto-stopping.
+ * `pitchRatio` scales all oscillator frequencies to shift the perceived pitch.
  */
-function _buildHihatSource(ctx, at, durationS) {
-  const freqs = [205.3, 369.99, 415.31, 461.16, 571.17, 715.44];
+function _buildHihatSource(ctx, at, durationS, pitchRatio) {
+  const baseFreqs = [205.3, 369.99, 415.31, 461.16, 571.17, 715.44];
   const mix = ctx.createGain();
   mix.gain.value = 1;
 
-  freqs.forEach(f => {
+  baseFreqs.forEach(f => {
     const osc = ctx.createOscillator();
     osc.type = 'square';
-    osc.frequency.value = f;
+    osc.frequency.value = Math.min(f * pitchRatio, ctx.sampleRate / 2 - 1);
 
     const g = ctx.createGain();
-    g.gain.value = 1 / freqs.length;
+    g.gain.value = 1 / baseFreqs.length;
     osc.connect(g);
     g.connect(mix);
     osc.start(at);
@@ -245,21 +253,22 @@ function _buildHihatSource(ctx, at, durationS) {
   return mix;
 }
 
-function _triggerHihatClosed(velocity, at) {
+function _triggerHihatClosed(note, velocity, at) {
   const ctx = getAudioCtx();
   const vol = velocity / 127;
+  const r   = _drumPitchRatio(note, DRUM_ROOT['hihat-closed']);
   const decayS = 0.07;
 
-  const src = _buildHihatSource(ctx, at, decayS);
+  const src = _buildHihatSource(ctx, at, decayS, r);
 
   const hp = ctx.createBiquadFilter();
   hp.type = 'highpass';
-  hp.frequency.value = 7000;
+  hp.frequency.value = Math.min(7000 * r, ctx.sampleRate / 2 - 1);
   hp.Q.value = 0.6;
 
   const bp = ctx.createBiquadFilter();
   bp.type = 'bandpass';
-  bp.frequency.value = 10000;
+  bp.frequency.value = Math.min(10000 * r, ctx.sampleRate / 2 - 1);
   bp.Q.value = 0.9;
 
   const vca = ctx.createGain();
@@ -272,26 +281,26 @@ function _triggerHihatClosed(velocity, at) {
   vca.connect(masterGain);
 }
 
-function _triggerHihatOpen(velocity, at) {
+function _triggerHihatOpen(note, velocity, at) {
   const ctx = getAudioCtx();
   const vol = velocity / 127;
+  const r   = _drumPitchRatio(note, DRUM_ROOT['hihat-open']);
   const decayS = 0.55;
 
-  const src = _buildHihatSource(ctx, at, decayS);
+  const src = _buildHihatSource(ctx, at, decayS, r);
 
   const hp = ctx.createBiquadFilter();
   hp.type = 'highpass';
-  hp.frequency.value = 6000;
+  hp.frequency.value = Math.min(6000 * r, ctx.sampleRate / 2 - 1);
   hp.Q.value = 0.5;
 
   const bp = ctx.createBiquadFilter();
   bp.type = 'bandpass';
-  bp.frequency.value = 9000;
+  bp.frequency.value = Math.min(9000 * r, ctx.sampleRate / 2 - 1);
   bp.Q.value = 0.7;
 
   const vca = ctx.createGain();
   vca.gain.setValueAtTime(vol * 0.28, at);
-  // Slow initial decay, then fall away — open hat "sizzle"
   vca.gain.setValueAtTime(vol * 0.22, at + 0.04);
   vca.gain.exponentialRampToValueAtTime(0.001, at + decayS);
 
@@ -301,12 +310,13 @@ function _triggerHihatOpen(velocity, at) {
   vca.connect(masterGain);
 }
 
-function _triggerSnare(velocity, at) {
+function _triggerSnare(note, velocity, at) {
   const ctx = getAudioCtx();
   const vol = velocity / 127;
+  const r   = _drumPitchRatio(note, DRUM_ROOT.snare);
 
-  // ── Tone body — two sine oscillators for the drum head resonance ──
-  const toneFreqs = [185, 230];
+  // ── Tone body — two sine oscillators scaled by pitch ratio ──
+  const toneFreqs = [185 * r, 230 * r];
   toneFreqs.forEach(f => {
     const osc = ctx.createOscillator();
     osc.type = 'sine';
@@ -323,7 +333,7 @@ function _triggerSnare(velocity, at) {
     osc.stop(at + 0.15);
   });
 
-  // ── Snare rattle — bandpass-filtered white noise ──
+  // ── Snare rattle — bandpass-filtered white noise, filters scaled by pitch ──
   const noiseLen = Math.floor(ctx.sampleRate * 0.22);
   const noiseBuf = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
   const nd = noiseBuf.getChannelData(0);
@@ -332,22 +342,20 @@ function _triggerSnare(velocity, at) {
   const noise = ctx.createBufferSource();
   noise.buffer = noiseBuf;
 
-  // High-pass strips the low rumble — snare wires live in the upper mids
   const hp = ctx.createBiquadFilter();
   hp.type = 'highpass';
-  hp.frequency.value = 1800;
+  hp.frequency.value = Math.min(1800 * r, ctx.sampleRate / 2 - 1);
   hp.Q.value = 0.8;
 
-  // Bandpass adds presence/crack around 4kHz
   const bp = ctx.createBiquadFilter();
   bp.type = 'bandpass';
-  bp.frequency.value = 4000;
+  bp.frequency.value = Math.min(4000 * r, ctx.sampleRate / 2 - 1);
   bp.Q.value = 0.6;
 
   const noiseGain = ctx.createGain();
   noiseGain.gain.setValueAtTime(vol * 0.55, at);
-  noiseGain.gain.exponentialRampToValueAtTime(vol * 0.18, at + 0.025); // fast initial snap
-  noiseGain.gain.exponentialRampToValueAtTime(0.001, at + 0.20);       // tail off
+  noiseGain.gain.exponentialRampToValueAtTime(vol * 0.18, at + 0.025);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, at + 0.20);
 
   noise.connect(hp);
   hp.connect(bp);
@@ -366,10 +374,10 @@ function _noteOnWithPreset(presetId, note, velocity, audioTime) {
   const at = Math.max(audioTime, ctx.currentTime + 0.001);
 
   // Drums are fire-and-forget — no voice tracking needed
-  if (presetId === 'kick')         { _triggerKick(velocity, at);         return; }
-  if (presetId === 'snare')        { _triggerSnare(velocity, at);        return; }
-  if (presetId === 'hihat-closed') { _triggerHihatClosed(velocity, at);  return; }
-  if (presetId === 'hihat-open')   { _triggerHihatOpen(velocity, at);    return; }
+  if (presetId === 'kick')         { _triggerKick(note, velocity, at);         return; }
+  if (presetId === 'snare')        { _triggerSnare(note, velocity, at);        return; }
+  if (presetId === 'hihat-closed') { _triggerHihatClosed(note, velocity, at);  return; }
+  if (presetId === 'hihat-open')   { _triggerHihatOpen(note, velocity, at);    return; }
 
   // If note is already playing (same voice key), stop it cleanly first
   _noteOff(note, audioTime);
