@@ -151,6 +151,16 @@ function handleLoopWrap() {
     } else {
       set('song.currentRepeat', nextRepeat);
     }
+    return;
+  }
+
+  // No song mode — if multiple scenes exist, auto-advance through them in order
+  const scenes = state.scenes;
+  if (scenes.length > 1) {
+    const nextSceneIndex = (state.activeSceneIndex + 1) % scenes.length;
+    switchToSceneImmediate(nextSceneIndex);
+    resetAllCursors();
+    resetCursor();
   }
 }
 
