@@ -222,3 +222,25 @@
   margin-left: 4px;
   white-space: nowrap;
 }
+
+.scene-bar-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+.scene-action-btn {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  height: 22px;
+  color: var(--accent-bright);
+  border-color: var(--accent-dim);
+  white-space: nowrap;
+}
+
+.scene-action-btn:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}

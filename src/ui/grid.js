@@ -60,6 +60,9 @@ export function initGrid(wrapperEl) {
     if (path.startsWith('transport.loop') || path === 'transport.direction') {
       renderBg();
     }
+    if (path.startsWith('pitch')) {
+      renderBg();
+    }
     if (path === 'ui.gridScrollTop' || path === 'ui.viewRangeNotes') {
       resizeCanvases();
       renderAll();
@@ -136,6 +139,7 @@ function renderBg() {
   const rows = state.ui.viewRangeNotes;
   const { gridScrollTop } = state.ui;
   const { scale, rootNote } = state.pitch;
+  const chromatic = scale === 'chromatic';
 
   bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
 
@@ -143,20 +147,43 @@ function renderBg() {
     const midiNote = gridScrollTop + rows - 1 - row;
     const y = row * ROW_H;
     const black = isBlackKey(midiNote);
-    const inScale = isInScale(midiNote, rootNote, scale);
+    const inScale = chromatic || isInScale(midiNote, rootNote, scale);
 
     // Row background
-    if (black) {
-      bgCtx.fillStyle = inScale ? '#1c1c24' : '#181820';
+    if (inScale) {
+      bgCtx.fillStyle = black ? '#1e1c2e' : '#252040';
     } else {
-      bgCtx.fillStyle = inScale ? '#222232' : '#1e1e26';
+      bgCtx.fillStyle = black ? '#181820' : '#1e1e26';
     }
     bgCtx.fillRect(0, y, bgCanvas.width, ROW_H);
+
+    // Accent stripe on left edge of in-scale rows
+    if (inScale) {
+      bgCtx.fillStyle = '#5a2db0';
+      bgCtx.fillRect(0, y + 1, 3, ROW_H - 2);
+    }
+
+    // X pattern across out-of-scale rows
+    if (!inScale) {
+      bgCtx.strokeStyle = '#ffffff18';
+      bgCtx.lineWidth = 1;
+      const cellW = COL_W;
+      const cols = state.transport.stepCount;
+      for (let col = 0; col < cols; col++) {
+        const x = col * cellW;
+        bgCtx.beginPath();
+        bgCtx.moveTo(x + 3, y + 2);
+        bgCtx.lineTo(x + cellW - 3, y + ROW_H - 2);
+        bgCtx.moveTo(x + cellW - 3, y + 2);
+        bgCtx.lineTo(x + 3, y + ROW_H - 2);
+        bgCtx.stroke();
+      }
+    }
 
     // C note line
     const name = midiNoteToName(midiNote);
     if (name.startsWith('C') && !name.includes('#')) {
-      bgCtx.fillStyle = '#ffffff10';
+      bgCtx.fillStyle = '#ffffff14';
       bgCtx.fillRect(0, y, bgCanvas.width, 1);
     }
   }
@@ -212,6 +239,8 @@ function renderContent() {
   const cols = state.transport.stepCount;
   const rows = state.ui.viewRangeNotes;
   const { gridScrollTop } = state.ui;
+  const { scale, rootNote } = state.pitch;
+  const chromatic = scale === 'chromatic';
 
   contentCtx.clearRect(0, 0, contentCanvas.width, contentCanvas.height);
 
@@ -226,6 +255,7 @@ function renderContent() {
       if (row < 0 || row >= rows) continue;
 
       const y = row * ROW_H;
+      if (!chromatic && !isInScale(note, rootNote, scale)) continue;
 
       // Cell fill
       if (step.muted) {

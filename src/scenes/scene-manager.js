@@ -122,3 +122,20 @@ export function renameScene(sceneIndex, name) {
   );
   set('scenes', scenes);
 }
+
+export function addScene() {
+  const scenes = get().scenes;
+  const newScene = defaultScene(scenes.length);
+  set('scenes', [...scenes, newScene]);
+}
+
+export function cloneCurrentScene() {
+  const state = get();
+  const scenes = state.scenes;
+  const snapshot = _snapshotCurrentState(scenes[state.activeSceneIndex]);
+  const newScene = {
+    ...snapshot,
+    name: `${snapshot.name || `Scene ${state.activeSceneIndex + 1}`} (copy)`,
+  };
+  set('scenes', [...scenes, newScene]);
+}

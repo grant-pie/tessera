@@ -1,6 +1,6 @@
 import { get, set } from '../state/state.js';
 import { on } from '../utils/event-bus.js';
-import { switchToScene, renameScene } from '../scenes/scene-manager.js';
+import { switchToScene, renameScene, addScene, cloneCurrentScene } from '../scenes/scene-manager.js';
 
 export function initSceneBar() {
   _renderSceneButtons();
@@ -20,6 +20,9 @@ export function initSceneBar() {
   });
 
   on('scene:loaded', () => _renderSceneButtons());
+
+  document.getElementById('scene-add-btn')?.addEventListener('click', addScene);
+  document.getElementById('scene-clone-btn')?.addEventListener('click', cloneCurrentScene);
 
   document.getElementById('song-mode-btn')?.addEventListener('click', () => {
     document.getElementById('song-panel').classList.add('open');
