@@ -437,8 +437,15 @@ function _noteOff(note, audioTime) {
   const at = Math.max(audioTime ?? ctx.currentTime, ctx.currentTime);
   const release = preset.release;
 
-  vca.gain.cancelScheduledValues(at);
-  vca.gain.setValueAtTime(vca.gain.value, at);
+  // cancelAndHoldAtTime lets the attack envelope run naturally up to `at`,
+  // then holds that value — critical for short substep notes where the
+  // gate fires before the attack completes. Falls back for older browsers.
+  if (vca.gain.cancelAndHoldAtTime) {
+    vca.gain.cancelAndHoldAtTime(at);
+  } else {
+    vca.gain.cancelScheduledValues(at);
+    vca.gain.setValueAtTime(vca.gain.value, at);
+  }
   vca.gain.linearRampToValueAtTime(0, at + release);
 
   const stopTime = at + release + 0.05;

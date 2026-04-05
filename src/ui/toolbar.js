@@ -3,6 +3,7 @@ import { on, emit } from '../utils/event-bus.js';
 import { tap as tapTempo } from '../utils/tap-tempo.js';
 import * as clock from '../clock/clock.js';
 import { resetCursor } from '../engine/sequencer.js';
+import { resetAllTrackCursors } from '../engine/scheduler.js';
 import { allTracksOff, resetAllGlideStates } from '../midi/midi-output.js';
 import { getInput, getOutputById } from '../midi/midi-access.js';
 
@@ -16,24 +17,41 @@ export function initToolbar(toolbarEl) {
   const clockSourceBtn = toolbarEl.querySelector('#clock-source-btn');
 
   // ── Transport ──────────────────────────────────────────
+  let paused = false;
+
   playBtn.addEventListener('click', () => {
     const state = get();
-    if (state.transport.playing) return;
+
+    if (state.transport.playing) {
+      // Pause — stop clock but keep cursor positions
+      clock.stop();
+      set('transport.playing', false);
+      paused = true;
+      return;
+    }
+
+    // Resume from pause or fresh play
+    if (!paused) {
+      // Fresh start — reset all cursors to the beginning
+      resetAllTrackCursors();
+      resetCursor();
+    }
+    paused = false;
     set('transport.playing', true);
-    resetCursor();
     clock.start({
       bpm: state.transport.bpm,
       swing: state.transport.swing,
       stepCount: state.transport.stepCount,
     });
-    playBtn.classList.add('active');
   });
 
   stopBtn.addEventListener('click', doStop);
 
   function doStop() {
     const state = get();
+    paused = false;
     clock.stop();
+    resetAllTrackCursors();
     allTracksOff(state.tracks, (track) => {
       return getOutputById(track.midiOutputId || state.midi.outputId);
     });
@@ -41,7 +59,6 @@ export function initToolbar(toolbarEl) {
     set('transport.playing', false);
     set('cursor.step', -1);
     emit('sequencer:step', { step: -1 });
-    playBtn.classList.remove('active');
   }
 
   // ── BPM ────────────────────────────────────────────────
@@ -118,7 +135,10 @@ export function initToolbar(toolbarEl) {
   on('stateChange', ({ path }) => {
     if (path === 'transport.bpm') bpmDisplay.textContent = get().transport.bpm;
     if (path === 'transport.playing') {
-      playBtn.classList.toggle('active', get().transport.playing);
+      const playing = get().transport.playing;
+      playBtn.classList.toggle('active', playing);
+      playBtn.textContent = playing ? '⏸' : '▶';
+      playBtn.title = playing ? 'Pause (Space)' : 'Play (Space)';
     }
   });
 

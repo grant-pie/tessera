@@ -34,9 +34,14 @@ function getCursor(track) {
 
 /**
  * Reset all per-track cursors to their start positions.
+ * Called internally on transport start/scene change, and exported for toolbar stop.
  */
 function resetAllCursors() {
   trackCursors.clear();
+}
+
+export function resetAllTrackCursors() {
+  resetAllCursors();
 }
 
 /**
