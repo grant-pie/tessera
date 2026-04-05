@@ -480,20 +480,27 @@ export function setReverbAmount(amount) {
 function _makeSendFn(presetId) {
   return function send(data, time) {
     const ctx = getAudioCtx();
-    if (ctx.state === 'suspended') ctx.resume();
 
     const status   = data[0];
     const type     = status & 0xF0;
     const note     = data[1];
     const velocity = data[2];
-    const audioTime = time ? toAudioTime(time) : ctx.currentTime;
 
-    if (type === 0x90 && velocity > 0) {
-      _noteOnWithPreset(presetId, note, velocity, audioTime);
-    } else if (type === 0x80 || (type === 0x90 && velocity === 0)) {
-      _noteOff(note, audioTime);
-    } else if (type === 0xB0 && note === 123) {
-      _allNotesOff();
+    const dispatch = () => {
+      const audioTime = time ? toAudioTime(time) : ctx.currentTime;
+      if (type === 0x90 && velocity > 0) {
+        _noteOnWithPreset(presetId, note, velocity, audioTime);
+      } else if (type === 0x80 || (type === 0x90 && velocity === 0)) {
+        _noteOff(note, audioTime);
+      } else if (type === 0xB0 && note === 123) {
+        _allNotesOff();
+      }
+    };
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(dispatch);
+    } else {
+      dispatch();
     }
   };
 }
@@ -520,26 +527,29 @@ export const factoryPort = {
   name: BUILTIN_NAME,
 
   send(data, time) {
-    // Resume AudioContext if suspended (browser autoplay policy)
     const ctx = getAudioCtx();
-    if (ctx.state === 'suspended') ctx.resume();
 
-    const status = data[0];
-    const type = status & 0xF0;
-    const note = data[1];
+    const status   = data[0];
+    const type     = status & 0xF0;
+    const note     = data[1];
     const velocity = data[2];
 
-    const audioTime = time ? toAudioTime(time) : ctx.currentTime;
+    const dispatch = () => {
+      const audioTime = time ? toAudioTime(time) : ctx.currentTime;
+      if (type === 0x90 && velocity > 0) {
+        _noteOn(note, velocity, audioTime);
+      } else if (type === 0x80 || (type === 0x90 && velocity === 0)) {
+        _noteOff(note, audioTime);
+      } else if (type === 0xB0 && note === 123) {
+        _allNotesOff();
+      }
+    };
 
-    if (type === 0x90 && velocity > 0) {
-      _noteOn(note, velocity, audioTime);
-    } else if (type === 0x80 || (type === 0x90 && velocity === 0)) {
-      _noteOff(note, audioTime);
-    } else if (type === 0xB0 && note === 123) {
-      // All Notes Off CC
-      _allNotesOff();
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(dispatch);
+    } else {
+      dispatch();
     }
-    // Other MIDI messages (CC, etc.) are silently ignored
   },
 };
 
